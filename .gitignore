@@ -1,0 +1,30 @@
+# ========================================================
+# Kredensial Pribadi & Cookies (SANGAT KRUSIAL - JANGAN DI-PUSH!)
+# ========================================================
+TK_cookies*.json
+*.cookie.json
+*cookie*.json
+cookies.json
+
+# ========================================================
+# Build & Distribution Snapshots
+# ========================================================
+Build/
+dist/
+
+# ========================================================
+# Playwright & Dev Tooling Cache
+# ========================================================
+.pw-profile/
+.playwright/
+Tools/node_modules/
+Tools/shot/
+capture-studio-nav/
+*.log
+
+# ========================================================
+# OS & System Junk
+# ========================================================
+.DS_Store
+Thumbs.db
+desktop.ini
