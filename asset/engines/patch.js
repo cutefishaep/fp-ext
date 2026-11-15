@@ -1,9 +1,3 @@
-/*
- * ADJN MP4 Core v5.0
- * Developed by F R Y 60fps & Adekjamannow
- *
- * 64-Bit Unknown Duration Sentinel & Bitstream Ingest Engine
- */
 (function (root, factory) {
   const api = factory();
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -16,15 +10,13 @@
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
-
   const VERSION = '5.0';
-  const ENCODER_TAG = 'ADJN Quality Method https://tiktok.com/@itsmefachry';
-  const FOURCC_TOO = new Uint8Array([0xa9, 0x74, 0x6f, 0x6f]); // '©too'
-  const SENTINEL_FF = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]); // 64-bit Unknown Duration Sentinel
+  const ENCODER_TAG = 'Method From cutefish.my.id';
+  const FOURCC_TOO = new Uint8Array([0xa9, 0x74, 0x6f, 0x6f]);
+  const SENTINEL_FF = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
   const CONTAINER_BOXES = new Set(['moov', 'trak', 'mdia', 'minf', 'stbl', 'edts']);
   const MAX_TABLE_ENTRIES = 50000000;
   const EMPTY_U8 = new Uint8Array(0);
-
   function createError(msg) {
     const err = new Error(msg);
     err.name = 'ADJNPatchError';
@@ -33,7 +25,6 @@
   function throwError(msg) {
     throw createError(msg);
   }
-
   function readU32(b, o) {
     return ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) >>> 0;
   }
@@ -82,7 +73,6 @@
     if (ArrayBuffer.isView(val)) return new Uint8Array(val.buffer, val.byteOffset, val.byteLength);
     throw createError('Buffer video tidak valid.');
   }
-
   function exactBytesEqual(a, b) {
     if (a.byteLength !== b.byteLength) return false;
     const step = 65536;
@@ -94,8 +84,6 @@
     }
     return true;
   }
-
-
   function indexOfSubarray(haystack, needleStr) {
     const needle = asciiToBytes(needleStr);
     outer: for (let i = 0; i + needle.length <= haystack.length; i++) {
@@ -106,7 +94,6 @@
     }
     return -1;
   }
-
   function Mp4Box(type, payload, children) {
     this.type = type;
     this.payload = payload || EMPTY_U8;
@@ -143,7 +130,6 @@
     }
     return concatBytes([u32ToBytes(body.length + 8), asciiToBytes(this.type), body]);
   };
-
   function parseBoxes(bytes, start, end) {
     const list = [];
     let p = start;
@@ -168,14 +154,12 @@
     }
     return list;
   }
-
   function makeBox(type, payload) {
     return concatBytes([u32ToBytes(payload.length + 8), asciiToBytes(type), payload]);
   }
   function makeBoxRaw(typeBytes, payload) {
     return concatBytes([u32ToBytes(payload.length + 8), typeBytes, payload]);
   }
-
   function scanBoxes(bytes, start, end, label) {
     const out = [];
     let p = start;
@@ -203,7 +187,6 @@
     }
     return out;
   }
-
   function makeDataAtom(text) {
     const dataPayload = concatBytes([u32ToBytes(1), u32ToBytes(0), asciiToBytes(text)]);
     return makeBoxRaw(FOURCC_TOO, makeBox('data', dataPayload));
@@ -268,7 +251,6 @@
   function hasEncoderTag(moov, tagText) {
     return moov.findAll('udta').some(u => !u.children && indexOfSubarray(u.payload, tagText) >= 0);
   }
-
   function parseTopLevel(bytes) {
     const list = [];
     let p = 0;
@@ -293,7 +275,6 @@
     }
     return list;
   }
-
   function validateBoxNesting(bytes, start, end, label, depth = 0) {
     if (depth > 24) throwError('Invalid MP4 — box nesting is too deep to patch safely.');
     let p = start;
@@ -318,7 +299,6 @@
       p += size;
     }
   }
-
   function isSentinelDuration(payload) {
     if (!payload || payload.length < 32 || payload[0] !== 1) return false;
     for (let i = 0; i < 8; i++) {
@@ -326,7 +306,6 @@
     }
     return true;
   }
-
   function patchMvhdToV1Sentinel(payload) {
     if (!payload || payload.length < 4) throwError('Malformed mvhd box (too short for version byte).');
     const ver = payload[0];
@@ -338,7 +317,6 @@
     }
     if (ver !== 0) throwError('Unsupported mvhd version: ' + ver + '.');
     if (payload.length < 100) throwError('Malformed version-0 mvhd box (too short).');
-    // Convert version 0 mvhd to version 1 with 64-bit duration sentinel (0xFFFFFFFFFFFFFFFF)
     return concatBytes([
       new Uint8Array([1, payload[1], payload[2], payload[3]]),
       u32ToBytes(0),
@@ -350,7 +328,6 @@
       cloneBytes(payload.subarray(20, 100))
     ]);
   }
-
   function validateTableEntries(bytes, headerSize, entrySize, label) {
     if (!bytes || bytes.length < 8) throwError('The ' + label + ' table is truncated.');
     const count = readU32(bytes, 4);
@@ -358,7 +335,6 @@
     if (headerSize + count * entrySize > bytes.length) throwError('The ' + label + ' table is truncated.');
     return count;
   }
-
   function parseStts(bytes) {
     const count = validateTableEntries(bytes, 8, 8, 'stts');
     const list = [];
@@ -367,7 +343,6 @@
     }
     return list;
   }
-
   function parseStsz(bytes) {
     if (!bytes || bytes.length < 12) throwError('The stsz table is truncated.');
     const uniform = readU32(bytes, 4);
@@ -380,7 +355,6 @@
     }
     return list;
   }
-
   function parseStsc(bytes) {
     const count = validateTableEntries(bytes, 8, 12, 'stsc');
     const list = [];
@@ -393,7 +367,6 @@
     }
     return list;
   }
-
   function parseStcoOrCo64(box) {
     const bytes = box.payload;
     const is64 = box.type === 'co64';
@@ -404,7 +377,6 @@
     }
     return list;
   }
-
   function writeStcoOrCo64(box, offsets) {
     let maxOff = 0;
     for (const off of offsets) if (off > maxOff) maxOff = off;
@@ -422,7 +394,6 @@
       box.payload = b;
     }
   }
-
   function getStbl(trak) {
     return trak.path('mdia', 'minf', 'stbl');
   }
@@ -454,7 +425,6 @@
     const stsd = getSampleTableBox(trak, 'stsd');
     return stsd && stsd.payload.length >= 8 ? readU32(stsd.payload, 4) : 0;
   }
-
   function parseTrackInfo(trak) {
     const stbl = getStbl(trak);
     if (!stbl) return null;
@@ -463,13 +433,11 @@
     const stts = stbl.find('stts');
     const offsBox = getOffsetBox(trak);
     if (!stsz || !stsc || !stts || !offsBox) return null;
-
     const sizes = parseStsz(stsz.payload);
     const sampleCount = sizes.length;
     const chunkOffsets = parseStcoOrCo64(offsBox);
     const runs = parseStsc(stsc.payload);
     if (!sampleCount || !chunkOffsets.length || !runs.length) return null;
-
     const samplesPerChunk = [];
     for (let i = 0; i < runs.length; i++) {
       const firstChunk = runs[i][0];
@@ -480,7 +448,6 @@
     if (samplesPerChunk.length !== chunkOffsets.length || samplesPerChunk.reduce((a, b) => a + b, 0) !== sampleCount) {
       return null;
     }
-
     const offsets = new Array(sampleCount);
     let sIdx = 0;
     for (let c = 0; c < chunkOffsets.length; c++) {
@@ -491,10 +458,8 @@
         sIdx++;
       }
     }
-
     const sttsTotal = parseStts(stts.payload).reduce((a, b) => a + b[0], 0);
     if (sttsTotal !== sampleCount) return null;
-
     return {
       trak,
       stsz,
@@ -507,7 +472,6 @@
       codec: getCodecFourCC(trak)
     };
   }
-
   function readDisplayDimensions(trak) {
     const tkhd = trak.find('tkhd');
     if (!tkhd || tkhd.payload.length < 84) return { width: 0, height: 0 };
@@ -518,27 +482,23 @@
     const h = readU32(tkhd.payload, widthOffset + 4) / 65536;
     return { width: Math.round(w), height: Math.round(h) };
   }
-
   function parseMp4Structure(bytes) {
     if (!bytes.length) throwError('File video kosong.');
     const topBoxes = parseTopLevel(bytes);
     validateBoxNesting(bytes, 0, bytes.length, 'top-level', 0);
     if (topBoxes.some(b => b.type === 'moof')) throwError('Fragmented MP4/MOV files tidak didukung untuk direct patch.');
-
     const ftypList = topBoxes.filter(b => b.type === 'ftyp');
     const moovList = topBoxes.filter(b => b.type === 'moov');
     const mdatList = topBoxes.filter(b => b.type === 'mdat');
     if (ftypList.length !== 1 || moovList.length !== 1 || mdatList.length !== 1) {
       throwError('Invalid MP4 — membutuhkan tepat satu box ftyp, moov, dan mdat.');
     }
-
     const ftypBox = ftypList[0];
     const moovBox = moovList[0];
     const mdatBox = mdatList[0];
     const moov = new Mp4Box('moov', null, parseBoxes(bytes, moovBox.start + moovBox.header, moovBox.end));
     const traks = moov.findAll('trak');
     if (!traks.length) throwError('Invalid MP4 — tidak ditemukan track di file video.');
-
     const mvhd = moov.find('mvhd');
     if (!mvhd || mvhd.payload.length < 4) throwError('Invalid MP4 — mvhd hilang.');
     if (isSentinelDuration(mvhd.payload)) {
@@ -547,7 +507,6 @@
     if (mvhd.payload[0] !== 0 && mvhd.payload[0] !== 1) {
       throwError('Unsupported mvhd version: ' + mvhd.payload[0]);
     }
-
     const tables = traks.map(parseTrackInfo);
     if (tables.some(t => t === null)) throwError('Tidak dapat memetakan sample table dari setiap track.');
     for (const t of tables) {
@@ -555,23 +514,18 @@
         throwError('Track dengan multiple codec descriptions tidak didukung.');
       }
     }
-
     const videoTracks = tables.filter(t => t.handler === 'vide');
     if (videoTracks.length !== 1) throwError('Membutuhkan tepat satu video track, ditemukan: ' + videoTracks.length);
-
     const video = videoTracks[0];
     const isAvc = video.codec === 'avc1' || video.codec === 'avc3';
     const isHevc = video.codec === 'hvc1' || video.codec === 'hev1' || video.codec === 'hvc2' || video.codec === 'hev2';
     if (!isAvc && !isHevc) {
       throwError('Codec video tidak didukung: ' + (video.codec || 'unknown') + '. Export sebagai H.264 (AVC) atau H.265 (HEVC).');
     }
-
     const audioTracks = tables.filter(t => t.handler === 'soun' && t.codec === 'mp4a');
     if (!audioTracks.length) throwError('Video membutuhkan audio track AAC (mp4a).');
-
     const sourceAudio = audioTracks[0];
     injectUdta(moov.clone(), ENCODER_TAG);
-
     const mdatPayloadStart = mdatBox.start + mdatBox.header;
     for (const t of tables) {
       for (let i = 0; i < t.count; i++) {
@@ -582,7 +536,6 @@
         }
       }
     }
-
     return {
       top: topBoxes,
       ftypBox,
@@ -598,18 +551,14 @@
       isHevc
     };
   }
-
   function executePatch(bytes, parsed) {
     const { top, moovBox, mdatBox, moov } = parsed;
     const mvhd = moov.find('mvhd');
     if (!mvhd || mvhd.payload.length < 4) throwError('Invalid MP4 — mvhd hilang.');
-
     mvhd.payload = patchMvhdToV1Sentinel(mvhd.payload);
     injectUdta(moov, ENCODER_TAG);
-
     const moovBeforeMdat = moovBox.start < mdatBox.start;
     const oldMoovSize = moovBox.end - moovBox.start;
-
     if (moovBeforeMdat) {
       const traksWithOffsets = moov.findAll('trak').filter(t => getOffsetBox(t));
       const origOffsets = traksWithOffsets.map(t => parseStcoOrCo64(getOffsetBox(t)));
@@ -625,7 +574,6 @@
         if (!changedType && moov.serialize().length === oldMoovSize + delta) break;
       }
     }
-
     const newMoovBytes = moov.serialize();
     const finalChunks = [];
     for (const b of top) {
@@ -633,25 +581,20 @@
     }
     return concatBytes(finalChunks);
   }
-
   function validateFinalOutput(bytes, originalBytes) {
     const top = parseTopLevel(bytes);
     if (!top.length || top[top.length - 1].end !== bytes.length) throwError('Hasil patch bukan box run lengkap.');
     const moovList = top.filter(b => b.type === 'moov');
     const mdatList = top.filter(b => b.type === 'mdat');
     if (moovList.length !== 1 || mdatList.length !== 1) throwError('Hasil patch harus memiliki tepat satu moov dan satu mdat.');
-
     const moovBox = moovList[0];
     const mdatBox = mdatList[0];
     const mdatStart = mdatBox.start + mdatBox.header;
     const mdatEnd = mdatBox.end;
     const moov = new Mp4Box('moov', null, parseBoxes(bytes, moovBox.start + moovBox.header, moovBox.end));
-
     if (!hasEncoderTag(moov, ENCODER_TAG)) throwError('Hasil patch tidak memiliki ADJN encoder tag.');
-
     const mvhd = moov.find('mvhd');
     if (!mvhd || !isSentinelDuration(mvhd.payload)) throwError('Hasil patch mvhd.duration bukan sentinel Unknown Duration.');
-
     for (const trak of moov.findAll('trak')) {
       const offsBox = getOffsetBox(trak);
       if (!offsBox) continue;
@@ -661,7 +604,6 @@
         }
       }
     }
-
     if (originalBytes) {
       const origTop = parseTopLevel(originalBytes);
       const origMdatBox = origTop.find(b => b.type === 'mdat');
@@ -674,7 +616,6 @@
       }
     }
   }
-
   function quickPatch(input) {
     const bytes = toU8Array(input);
     const parsed = parseMp4Structure(bytes);
@@ -682,7 +623,6 @@
     validateFinalOutput(patched, bytes);
     return patched;
   }
-
   function checkCompatibility(input) {
     try {
       const parsed = parseMp4Structure(toU8Array(input));
@@ -707,28 +647,23 @@
       };
     }
   }
-
   function inspect(input) {
     const bytes = toU8Array(input);
     const top = parseTopLevel(bytes);
     const moovBox = top.find(b => b.type === 'moov');
     const moov = moovBox ? new Mp4Box('moov', null, parseBoxes(bytes, moovBox.start + moovBox.header, moovBox.end)) : new Mp4Box('moov', null, []);
     const traks = moov.findAll('trak');
-
     function getTrackSampleCount(trak) {
       const stsz = getSampleTableBox(trak, 'stsz');
       return stsz && stsz.payload.length >= 12 ? readU32(stsz.payload, 8) : 0;
     }
-
     const videoTrak = traks.find(t => getTrackHandler(t) === 'vide');
     const audioTraks = traks.filter(t => getTrackHandler(t) === 'soun');
     const primaryAudio = audioTraks.find(t => getCodecFourCC(t) === 'mp4a') || audioTraks[0];
     const vCodec = videoTrak ? getCodecFourCC(videoTrak) : '';
     const aCodec = primaryAudio ? getCodecFourCC(primaryAudio) : '';
-
     let declaredAudioSamples = 0;
     for (const a of audioTraks) declaredAudioSamples += getTrackSampleCount(a);
-
     const mvhd = moov.find('mvhd');
     return {
       codec: vCodec,
@@ -744,7 +679,6 @@
       encoderTag: hasEncoderTag(moov, ENCODER_TAG) ? ENCODER_TAG : ''
     };
   }
-
   function inspectMediaInfo(input) {
     const bytes = toU8Array(input);
     const top = parseTopLevel(bytes);
@@ -752,7 +686,6 @@
     if (!moovBox) throw createError('ADJN Core: moov box tidak ditemukan.');
     const moov = new Mp4Box('moov', null, parseBoxes(bytes, moovBox.start + moovBox.header, moovBox.end));
     const traks = moov.findAll('trak');
-
     const allTracks = traks.map((trak, idx) => {
       const handler = getTrackHandler(trak);
       const codec = getCodecFourCC(trak);
@@ -781,11 +714,9 @@
         maxFps: avgFps
       };
     });
-
     const video = allTracks.find(t => t.handler === 'vide');
     const audio = allTracks.find(t => t.handler === 'soun');
     if (!video) throw createError('ADJN Core: video track tidak ditemukan.');
-
     return {
       width: video.width || 1080,
       height: video.height || 1920,
@@ -800,7 +731,6 @@
       tracks: allTracks
     };
   }
-
   function inspectCompatibility(input) {
     const comp = checkCompatibility(input);
     return {
@@ -808,7 +738,6 @@
       reasons: comp.compatible ? [] : [comp.reason]
     };
   }
-
   function patchWithReport(input) {
     const original = toU8Array(input);
     const patched = quickPatch(original);
@@ -828,7 +757,6 @@
       }
     };
   }
-
   function verifyOutput(originalInput, outputInput) {
     const orig = toU8Array(originalInput);
     const out = toU8Array(outputInput);
@@ -857,7 +785,6 @@
       allTracksPreserved: true
     };
   }
-
   return {
     version: VERSION,
     quickPatch,
@@ -869,4 +796,3 @@
     verifyOutput
   };
 });
-

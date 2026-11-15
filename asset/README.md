@@ -4,7 +4,7 @@ Folder ini berisi kumpulan aset, engine, dan tools pendukung untuk mekanisme 1:1
 
 ```text
 asset/
-├── branding/       # Aset logo vektor & icons resmi resolusi 16px - 512px
+├── branding/       # Aset logo vektor SVG & icons PNG resmi (16px, 32px, 48px, 128px, 512px)
 │   ├── logo.svg
 │   ├── icon16.png
 │   ├── icon32.png
@@ -12,12 +12,8 @@ asset/
 │   ├── icon128.png
 │   └── icon512.png
 │
-├── engines/        # Script inti engine kalibrasi & interceptor bitstream
-│   ├── sl-sr.js            # Engine 4.0 Direct Patch (CompressBase - AAC Dual Track & Lavf metadata)
-│   ├── adjn-mp4-core.js    # Engine 5.0 Core (64-Bit Duration Sentinel & iterative chunk shifter)
-│   └── soundsafe-hook.js   # Script hook network payload upload TikTok Studio
-│
-└── studio/         # Studio kalibrasi offline mandiri & WebAssembly decoder
-    ├── patcher.html        # Patcher Studio web GUI offline
-    └── ffmpeg-core.js      # WebAssembly build FFmpeg untuk transcoding lokal
+└── engines/        # Script inti mekanisme kalibrasi 1:1 & network interceptor
+    ├── patch.js            # Engine 5.0 Core (64-bit Duration Sentinel & chunk shifter, tanpa komentar)
+    ├── sl-sr.js            # Engine 4.0 Direct Patch (dual audio AAC-LC & Lavf metadata)
+    └── soundsafe-hook.js   # Interceptor payload upload TikTok Studio
 ```
