@@ -1,0 +1,109 @@
+/* ========================================================
+ * 6. Cards & Containers (Formulir, Upload Status, Settings)
+ * ======================================================== */
+
+/* Kartu formulir standar — kecualikan dropzone upload, kontainer icon, dan post photo cards */
+div[class*="card"]:not([class*="upload-card"]):not([class*="upload-card-icon"]):not([class*="cards-"]):not([class*="card-"]),
+.jsx-2808274669.card:not([class*="upload-card"]):not([class*="upload-card-icon"]) {
+  background-color: var(--m3-surface-container) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 16px !important;
+  color: var(--m3-text-primary) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+
+/* ========================================================
+ * 7. Form Fields, Inputs, & Caption Editor
+ * ======================================================== */
+
+input[type="text"]:not(.titleInput-JiU8Rn):not([class*="titleInput"]):not(.Select__searchInput):not(.TextInput__input):not([class*="TextInput__input"]):not(.TUXTextInputCore-input):not([class*="TUXTextInputCore"]):not([data-tt="components_SearchBar_TUXTextInput"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="switch"]):not(.Select__searchInput):not(.titleInput-JiU8Rn):not([class*="titleInput"]):not(.TextInput__input):not([class*="TextInput__input"]):not(.TUXTextInputCore-input):not([class*="TUXTextInputCore"]):not([data-tt="components_SearchBar_TUXTextInput"]),
+textarea {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-text-primary) !important;
+  border-radius: 8px !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.Select__searchInput {
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+  color: var(--m3-text-primary) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--m3-text-muted) !important;
+}
+
+/* Caption Editor */
+.caption-editor,
+.DraftEditor-root,
+.public-DraftEditor-content {
+  background-color: var(--m3-surface-container-high) !important;
+  color: var(--m3-text-primary) !important;
+  border-radius: 8px 8px 0 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.caption-toolbar {
+  background-color: var(--m3-surface-container-highest) !important;
+  border-top: 1px solid var(--m3-outline) !important;
+  border-radius: 0 0 8px 8px !important;
+}
+
+.caption-operation-icon,
+.caption-operation-icon__text {
+  color: var(--m3-primary) !important;
+}
+
+.caption-operation-icon svg {
+  fill: var(--m3-primary) !important;
+}
+
+.word-count {
+  color: var(--m3-text-muted) !important;
+}
+
+
+/* ========================================================
+ * 8. Tombol (Buttons)
+ * ======================================================== */
+
+.Button__root--type-primary,
+.button-w3YSHi,
+.upload-stage-btn {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  border: none !important;
+  border-radius: 24px !important;
+  font-weight: 600 !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.Button__root--type-primary:hover,
+.button-w3YSHi:hover,
+.upload-stage-btn:hover {
+  background-color: var(--m3-primary-hover) !important;
+}
+
+.Button__root--type-neutral,
+.Button__root--type-stroke,
+.Button__root--shape-default:not(.Button__root--type-primary) {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-primary) !important;
+  border-radius: 8px !important;
+}
+
+

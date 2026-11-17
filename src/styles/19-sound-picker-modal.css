@@ -1,0 +1,395 @@
+/* ========================================================
+ * 22. TikTok Studio Sound Picker Modal (Native Mobile Bottom Sheet)
+ * ======================================================== */
+.TUXModal-overlay:has(.MusicPickerView__root),
+.TUXModal-overlay:has([class*="pickerModal"]),
+div[class*="Modal-overlay"]:has(.MusicPickerView__root),
+div[class*="Modal-overlay"]:has([class*="pickerModal"]) {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  z-index: 100001 !important;
+  pointer-events: none !important;
+}
+
+.pickerModal-e479j7,
+div.pickerModal-e479j7,
+div[class*="pickerModal"],
+.TUXModal-overlay > .TUXModal:has(.MusicPickerView__root),
+.TUXModal-overlay > div[role="dialog"]:has(.MusicPickerView__root) {
+  position: fixed !important;
+  width: min(580px, 92vw) !important;
+  max-width: 92vw !important;
+  height: min(650px, 86vh) !important;
+  max-height: 86vh !important;
+  margin: auto !important;
+  left: 50% !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  background-color: #1a221c !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  z-index: 100001 !important;
+  padding: 0 !important;
+  animation: m3DialogZoom 0.2s cubic-bezier(0, 0, 0.2, 1) !important;
+}
+
+@keyframes m3DialogZoom {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Non-mobile (desktop): Hilangkan handle bar drag */
+.pickerModal-e479j7::before,
+div[class*="pickerModal"]::before {
+  display: none !important;
+}
+
+/* Mobile responsive (< 640px): Menjadi Bottom Drawer */
+@media (max-width: 640px) {
+  .pickerModal-e479j7,
+  div.pickerModal-e479j7,
+  div[class*="pickerModal"],
+  .TUXModal-overlay > .TUXModal:has(.MusicPickerView__root),
+  .TUXModal-overlay > div[role="dialog"]:has(.MusicPickerView__root) {
+    top: auto !important;
+    bottom: 0 !important;
+    transform: translateX(-50%) !important;
+    border-radius: 24px 24px 0 0 !important;
+    border-bottom: none !important;
+    height: 78vh !important;
+    max-height: 80vh !important;
+    animation: m3DrawerSlideUp 0.25s cubic-bezier(0, 0, 0.2, 1) !important;
+  }
+
+  .pickerModal-e479j7::before,
+  div[class*="pickerModal"]::before {
+    content: '' !important;
+    display: block !important;
+    width: 36px !important;
+    height: 4px !important;
+    border-radius: 9999px !important;
+    background-color: var(--m3-outline) !important;
+    margin: 10px auto 4px auto !important;
+    flex-shrink: 0 !important;
+  }
+}
+
+.pickerModal-e479j7 .common-modal-body,
+div[class*="pickerModal"] .common-modal-body {
+  padding: 0 !important;
+  margin: 0 !important;
+  background-color: transparent !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.MusicPickerView__root {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  background-color: transparent !important;
+  color: var(--m3-text-primary) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* Header Modal Suara */
+.MusicPickerView__header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(59, 73, 62, 0.4) !important;
+  padding: 16px 20px 14px 20px !important;
+  flex-shrink: 0 !important;
+}
+
+.MusicPickerView__title {
+  color: var(--m3-text-primary) !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+.MusicPickerView__header button {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background-color: var(--m3-surface-container-high) !important;
+  color: var(--m3-text-secondary) !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.MusicPickerView__header button:hover {
+  background-color: var(--m3-surface-container-highest) !important;
+  color: var(--m3-text-primary) !important;
+}
+
+.MusicPickerView__panelWrapper,
+.MusicPanelContainer__root {
+  background-color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+/* Search Bar Ringkas */
+.MusicPanelContainer__topBar {
+  background-color: transparent !important;
+  padding: 12px 20px 4px 20px !important;
+  flex-shrink: 0 !important;
+}
+
+.MusicPanelSearchBar__wrap .TextInput__root {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 9999px !important;
+  height: 36px !important;
+  padding: 0 14px !important;
+}
+
+.TextInput__root .TextInput__input,
+.TextInput__root input,
+.MusicPanelSearchBar__wrap .TextInput__input,
+.MusicPanelSearchBar__wrap input {
+  color: var(--m3-text-primary) !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+.MusicPanelSearchBar__wrap .TextInput__input::placeholder {
+  color: var(--m3-text-muted) !important;
+}
+
+.MusicPanelSearchBar__icon svg,
+.MusicPanelSearchBar__icon {
+  fill: var(--m3-text-secondary) !important;
+  color: var(--m3-text-secondary) !important;
+}
+
+/* Tabs Ringkas */
+.MusicPanelTabList__tabs {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.MusicPanelTabList__tabs .Tabs__listWrap {
+  display: flex !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  margin: 4px auto 10px auto !important;
+  padding: 0 !important;
+}
+
+.MusicPanelTabList__tabs .Tabs__list {
+  background-color: var(--m3-surface-container-low) !important;
+  border-radius: 9999px !important;
+  padding: 3px !important;
+  border: 1px solid var(--m3-outline) !important;
+  display: inline-flex !important;
+  margin: 0 !important;
+}
+
+.MusicPanelTabList__tabs .Tabs__trigger {
+  border-radius: 9999px !important;
+  color: var(--m3-text-secondary) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  padding: 5px 14px !important;
+  border: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.MusicPanelTabList__tabs .Tabs__trigger[data-state="active"] {
+  background-color: var(--m3-primary-container) !important;
+  color: var(--m3-on-primary-container) !important;
+  font-weight: 700 !important;
+}
+
+/* Hilangkan Warna Hitam & Gap Belang-Belang di Konten Musik */
+.MusicPanelContainer__root .Tabs__content,
+.MusicPanelContainer__root .Tabs__panel,
+.MusicPanelTabList__tabs .Tabs__content,
+.MusicPanelTabList__tabs .Tabs__panel,
+.MusicPanelTabList__content,
+.MusicPanelTabListMusicList__list,
+.ScrollList__root {
+  background-color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* List Item Musik yang Scrollable & Proporsional */
+.ScrollList__listBox {
+  background-color: transparent !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 0 16px 24px 16px !important;
+  overflow-y: auto !important;
+  flex: 1 1 auto !important;
+}
+
+.MusicPanelMusicItem__wrap {
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(59, 73, 62, 0.35) !important;
+  padding: 10px 6px !important;
+  border-radius: 12px !important;
+  transition: background-color 0.15s ease !important;
+  margin-bottom: 2px !important;
+}
+
+.MusicPanelMusicItem__wrap:hover,
+.MusicPanelMusicItem__container--active-true {
+  background-color: rgba(36, 44, 38, 0.7) !important;
+}
+
+.MusicPanelMusicItem__cover {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 8px !important;
+  object-fit: cover !important;
+}
+
+.MusicPanelMusicItem__infoBasicTitle {
+  color: var(--m3-text-primary) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+}
+
+.MusicPanelMusicItem__infoBasicDesc {
+  color: var(--m3-text-secondary) !important;
+  font-size: 11px !important;
+  margin-top: 2px !important;
+}
+
+/* Tombol Use Proporsional & Elegan */
+button.MusicPickerView__addButton,
+button[class*="MusicPickerView__addButton"],
+.MusicPickerView__addButton.Button__root {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  height: 28px !important;
+  padding: 0 14px !important;
+  box-shadow: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+}
+
+button.MusicPickerView__addButton *,
+.MusicPickerView__addButton * {
+  color: var(--m3-on-primary) !important;
+  font-weight: 700 !important;
+}
+
+button.MusicPickerView__addButton:hover {
+  background-color: #bbf0bf !important;
+}
+
+/* Progress Player Bar Audio saat lagu diputar */
+.MusicPanelMusicItem__player {
+  margin-top: 8px !important;
+  padding: 2px 4px 4px 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  color: var(--m3-text-primary) !important;
+}
+
+.MusicPanelMusicItem__player * {
+  color: var(--m3-text-primary) !important;
+}
+
+.MusicPanelMusicItem__playerDuration,
+.MusicPanelMusicItem__player [class*="Duration"],
+.MusicPanelMusicItem__player [class*="duration"] {
+  color: var(--m3-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+.MusicPanelMusicItem__player .Slider__root {
+  height: 4px !important;
+  background-color: rgba(255, 255, 255, 0.15) !important;
+  border-radius: 9999px !important;
+  flex: 1 1 auto !important;
+}
+
+.MusicPanelMusicItem__player .Slider__progress {
+  background-color: var(--m3-primary) !important;
+  border-radius: 9999px !important;
+}
+
+.MusicPanelMusicItem__player .Slider__thumb,
+.MusicPanelMusicItem__player [data-part="thumb"] {
+  width: 10px !important;
+  height: 10px !important;
+  background-color: var(--m3-primary) !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 6px rgba(163, 219, 167, 0.8) !important;
+}
+
+.MusicPanelMusicItem__playerTime,
+.MusicPanelMusicItem__player [class*="time"],
+.MusicPanelMusicItem__player [class*="Time"] {
+  color: var(--m3-text-secondary) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+}
+
+

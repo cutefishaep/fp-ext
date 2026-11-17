@@ -1,0 +1,16 @@
+/* ========================================================
+ * 21. Auto-Hide Floating Navbar / Dock saat Pop-up / Modal Terbuka
+ * ======================================================== */
+#m3-floating-nav {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, visibility 0.2s !important;
+}
+
+body.m3-modal-open #m3-floating-nav,
+#m3-floating-nav.nav-hidden {
+  transform: translate(-50%, 200%) !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+

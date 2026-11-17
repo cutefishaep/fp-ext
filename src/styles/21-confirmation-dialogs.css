@@ -1,0 +1,180 @@
+/* ========================================================
+ * 24. Confirmation & Alert Dialogs (Material 3 Compact Dialog)
+ * ======================================================== */
+.common-modal-confirm-modal,
+.TUXModal:has(.common-modal-footer),
+.TUXModal.common-modal-confirm-modal,
+.common-modal:not(:has(.MusicPickerView__root)):not([class*="pickerModal"]),
+.TUXModal-overlay [role="dialog"]:not(:has(.MusicPickerView__root)):not([class*="pickerModal"]):not([class*="cover-modal"]):not([class*="edit-cover-modal"]):not(:has([data-tt*="Modal_Container"])),
+div[class*="ConfirmModal"],
+div[class*="confirm-modal"],
+div[class*="delete-modal"] {
+  position: fixed !important;
+  width: min(460px, 92vw) !important;
+  max-width: 92vw !important;
+  height: auto !important;
+  min-height: fit-content !important;
+  max-height: 90vh !important;
+  left: 50% !important;
+  top: 50% !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: auto !important;
+  padding: 24px !important;
+  border-radius: 28px !important;
+  background-color: var(--m3-surface-container) !important;
+  border: 1px solid var(--m3-outline) !important;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.8) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  z-index: 100005 !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  animation: m3DialogZoom 0.2s cubic-bezier(0, 0, 0.2, 1) !important;
+}
+
+.common-modal-confirm-modal::before,
+.TUXModal:has(.common-modal-footer)::before,
+.TUXModal-overlay [role="dialog"]::before,
+.TUXModal-overlay div[data-tt*="Modal_Container"]::before {
+  display: none !important;
+}
+
+.common-modal-confirm-modal .common-modal-header,
+.TUXModal-overlay [role="dialog"] [class*="header"],
+div[data-tt*="components_Modal_Overlay"] [class*="header"],
+.TUXModal-overlay div[data-tt*="Modal_Container"] [class*="header"] {
+  padding: 0 0 12px 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.common-modal-confirm-modal .common-modal-header [class*="TUXText"],
+.TUXModal-overlay [role="dialog"] [class*="header"] [class*="TUXText"],
+div[data-tt*="components_Modal_Overlay"] [class*="header"] [class*="TUXText"],
+.TUXModal-overlay div[data-tt*="Modal_Container"] [class*="header"] [class*="TUXText"],
+.TUXModal-overlay [role="dialog"] [class*="header"] h1,
+.TUXModal-overlay [role="dialog"] [class*="header"] h2 {
+  color: var(--m3-text-primary) !important;
+  font-size: 20px !important;
+  font-weight: 700 !important;
+}
+
+.common-modal-confirm-modal .common-modal-body,
+.TUXModal-overlay [role="dialog"] [class*="body"],
+div[data-tt*="components_Modal_Overlay"] [class*="body"],
+.TUXModal-overlay div[data-tt*="Modal_Container"] [class*="body"] {
+  padding: 0 0 24px 0 !important;
+  margin: 0 !important;
+  color: var(--m3-text-secondary) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.common-modal-confirm-modal .common-modal-footer,
+.TUXModal-overlay [role="dialog"] [class*="footer"],
+div[data-tt*="components_Modal_Overlay"] [class*="footer"],
+.TUXModal-overlay div[data-tt*="Modal_Container"] [class*="footer"] {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+.common-modal-confirm-modal .common-modal-footer button,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button,
+.TUXModal-overlay div[data-tt*="Modal_Container"] [class*="footer"] button {
+  height: 40px !important;
+  border-radius: 9999px !important;
+  padding: 0 20px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Tombol Cancel (Neutral / Outlined) */
+.common-modal-confirm-modal .common-modal-footer button[class*="type-neutral"],
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="secondary"],
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="neutral"],
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="cancel"],
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="secondary"],
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="neutral"],
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="cancel"] {
+  background-color: transparent !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-text-primary) !important;
+}
+
+.common-modal-confirm-modal .common-modal-footer button[class*="type-neutral"]:hover,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="secondary"]:hover,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="neutral"]:hover,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="cancel"]:hover,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="secondary"]:hover,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="neutral"]:hover,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="cancel"]:hover {
+  background-color: var(--m3-surface-container-high) !important;
+}
+
+/* Tombol Exit / Action (Primary) */
+.common-modal-confirm-modal .common-modal-footer button[class*="type-primary"],
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="primary"]:not([class*="danger"]):not([class*="destructive"]),
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="primary"]:not([class*="danger"]):not([class*="destructive"]) {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  border: none !important;
+}
+
+.common-modal-confirm-modal .common-modal-footer button[class*="type-primary"] *,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="primary"]:not([class*="danger"]):not([class*="destructive"]) *,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="primary"]:not([class*="danger"]):not([class*="destructive"]) * {
+  color: var(--m3-on-primary) !important;
+  font-weight: 700 !important;
+}
+
+.common-modal-confirm-modal .common-modal-footer button[class*="type-primary"]:hover,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="primary"]:not([class*="danger"]):not([class*="destructive"]):hover,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="primary"]:not([class*="danger"]):not([class*="destructive"]):hover {
+  background-color: #bbf0bf !important;
+}
+
+/* Tombol Delete / Destructive Warning (Soft Red Danger) */
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="danger"],
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="destructive"],
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="danger"],
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="destructive"] {
+  background-color: #ffb4ab !important;
+  color: #690005 !important;
+  border: none !important;
+}
+
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="danger"] *,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="destructive"] *,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="danger"] *,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="destructive"] * {
+  color: #690005 !important;
+  font-weight: 700 !important;
+}
+
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="danger"]:hover,
+.TUXModal-overlay [role="dialog"] [class*="footer"] button[class*="destructive"]:hover,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="danger"]:hover,
+div[data-tt*="components_Modal_Overlay"] [class*="footer"] button[class*="destructive"]:hover {
+  background-color: #ffdad6 !important;
+}
+
+

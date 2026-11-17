@@ -1,0 +1,232 @@
+/* ========================================================
+ * 17. Schedule Post Switch & Scheduled Picker
+ * ======================================================== */
+.jsx-2816910013.schedule-radio-container,
+div[class*="schedule-radio-container"] {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin: 12px 0 !important;
+}
+
+.jsx-2816910013.scheduled-picker,
+div[class*="scheduled-picker"] {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  align-items: center !important;
+  margin-top: 10px !important;
+  width: 100% !important;
+}
+
+.Picker__root.schedule-picker,
+div[class*="schedule-picker"] {
+  flex: 1 1 140px !important;
+  min-width: 130px !important;
+}
+
+.Picker__trigger,
+div[role="combobox"][class*="Picker__trigger"] {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 12px !important;
+  color: var(--m3-text-primary) !important;
+  height: 40px !important;
+  padding: 0 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.Picker__trigger:hover,
+.Picker__trigger[data-open="true"] {
+  background-color: var(--m3-surface-container-highest) !important;
+  border-color: var(--m3-primary) !important;
+}
+
+.Picker__leftIcon svg {
+  color: var(--m3-primary) !important;
+  fill: var(--m3-primary) !important;
+}
+
+.Picker__value {
+  color: var(--m3-text-primary) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.Picker__indicator svg {
+  color: var(--m3-text-secondary) !important;
+  fill: var(--m3-text-secondary) !important;
+}
+
+/* Timezone Input: hilangkan outline ganda di dalam trigger */
+.jsx-1574214355.timezone-select,
+div[class*="timezone-select"] {
+  flex: 1 1 180px !important;
+  min-width: 160px !important;
+}
+
+.timezone-select .Select__trigger,
+button.Select__trigger:has(.timezone-select-icon) {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 12px !important;
+  height: 40px !important;
+  padding: 0 12px !important;
+}
+
+.timezone-select .Select__searchInput,
+button.Select__trigger .Select__searchInput {
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  color: var(--m3-text-primary) !important;
+  font-size: 13px !important;
+}
+
+/* Kalender Grid Dropdown (.DatePicker__panel): Satu-satunya Card Outer */
+.Picker__panel,
+.schedule-picker-panel,
+div[class*="schedule-picker-panel"] {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: var(--m3-text-primary) !important;
+}
+
+/* Inner DatePicker Panel: Strip borders & backgrounds ganda */
+.DatePicker__panel,
+div[class*="DatePicker__panel"],
+.Picker__panel .DatePicker__panel {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 12px !important;
+}
+
+.DatePicker__header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 10px !important;
+}
+
+.DatePicker__nav {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 8px !important;
+  color: var(--m3-text-primary) !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+}
+
+.DatePicker__nav:hover {
+  background-color: var(--m3-surface-container-highest) !important;
+  border-color: var(--m3-primary) !important;
+  color: var(--m3-primary) !important;
+}
+
+.DatePicker__titleMonth,
+.DatePicker__titleYear {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  color: var(--m3-primary) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+}
+
+.DatePicker__weekDay {
+  color: var(--m3-text-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  padding: 4px 0 !important;
+}
+
+.DatePicker__day {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: 50% !important;
+  color: var(--m3-text-primary) !important;
+  font-size: 13px !important;
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.DatePicker__day:hover:not([disabled]) {
+  background-color: var(--m3-surface-container-highest) !important;
+  color: var(--m3-primary) !important;
+}
+
+.DatePicker__day[data-selected="true"],
+.DatePicker__day[aria-selected="true"] {
+  background-color: var(--m3-primary) !important;
+  color: #093817 !important;
+  font-weight: 700 !important;
+}
+
+.DatePicker__day[disabled],
+.DatePicker__day[data-disabled="true"] {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+}
+
+
+/* ========================================================
+ * 18. Zero Blur & High-Performance Pop-up Animation
+ * ======================================================== */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@keyframes m3PopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.Dropdown__content,
+.Picker__panel,
+.DatePicker__panel,
+.Select__menu,
+.Select__content,
+div[data-tt="components_Modal_Container"]:not(.cover-modal):not([class*="cover-modal"]) {
+  animation: m3PopIn 0.15s cubic-bezier(0, 0, 0.2, 1) !important;
+  transform-origin: center top !important;
+}
+
+

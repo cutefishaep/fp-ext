@@ -1,0 +1,187 @@
+/* ========================================================
+ * 13. Mobile-Friendly Post Edit Stage (Video & Photo Editor)
+ * ======================================================== */
+
+/* Container utama editor video: ubah dari 2 kolom desktop ke 1 kolom vertikal responsif */
+@media (max-width: 1024px) {
+  .jsx-1566941760.container,
+  div[class*="container"]:has(> div[class*="main"]):has(> div[class*="aside"]) {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    gap: 20px !important;
+  }
+
+  /* Kolom Form Kiri (Description, Cover, Settings, Checks) membentang penuh 100% dan berada DI BAWAH preview */
+  .jsx-1566941760.main,
+  div[class*="main"]:has(> div[class*="card"]) {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 100% !important;
+    order: 2 !important;
+  }
+
+  /* Kolom Preview (Phone Mockup) diposisikan di ATAS Details & diperkecil rapi */
+  .jsx-1566941760.aside,
+  div[class*="aside"]:has(> .mobile-preview-container),
+  div:has(> .mobile-preview-container) {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 8px auto 20px auto !important;
+    flex: 0 0 auto !important;
+    order: 1 !important;
+  }
+
+  .mobile-preview-container {
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+  }
+
+  /* Perkecil Frame Phone Preview agar kompak dan pas di atas form Details */
+  .mobile-preview-player {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    zoom: 0.78 !important;
+  }
+
+  @supports not (zoom: 0.78) {
+    .mobile-preview-player {
+      transform: scale(0.78) !important;
+      transform-origin: top center !important;
+      margin-bottom: -110px !important;
+    }
+  }
+
+  .mobile-preview-tabs-wrapper {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Tombol Edit, Sounds, Text di Bawah Video Preview (Disembunyikan Sesuai Permintaan) */
+  #open-new-editor,
+  .edit-video-btn,
+  div[class*="edit-video-btn"] {
+    display: none !important;
+  }
+
+  /* Info File Video Bagian Atas */
+  .jsx-1979214919.info-body,
+  div[class*="info-body"] {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 12px !important;
+    width: 100% !important;
+    padding: 12px 16px !important;
+    box-sizing: border-box !important;
+    position: relative !important;
+  }
+
+  .jsx-1979214919.info-main,
+  div[class*="info-main"] {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    overflow: hidden !important;
+  }
+
+  .jsx-1979214919.info-title,
+  div[class*="info-title"] {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .info-title span.TUXText--truncate,
+  .info-title span {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .jsx-1979214919.info-aside,
+  div[class*="info-aside"] {
+    position: static !important;
+    transform: none !important;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+  }
+
+  /* Toolbar Deskripsi (# Hashtags, @ Mention, Counter) */
+  .jsx-489165481.caption-toolbar,
+  div[class*="caption-toolbar"] {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+    margin-top: 8px !important;
+  }
+
+  .jsx-489165481.operation-button,
+  div[class*="operation-button"] {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+  }
+
+  /* Kartu-kartu form */
+  .jsx-2808274669.card,
+  div[class*="card"] {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Footer Tombol Aksi Bawah (Discard, Save draft, Post) */
+  .jsx-1566941760.footer,
+  div[class*="footer"]:has(.button-group) {
+    display: flex !important;
+    width: 100% !important;
+    margin: 24px 0 !important;
+  }
+
+  .jsx-1566941760.button-group,
+  div[class*="footer"] div[class*="button-group"],
+  div[class*="button-group"]:not(.local-draft-button-group) {
+    display: flex !important;
+    flex-direction: row-reverse !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .jsx-1566941760.button-group button,
+  div[class*="footer"] div[class*="button-group"] button,
+  div[class*="button-group"]:not(.local-draft-button-group) button {
+    flex: 1 1 120px !important;
+    max-width: 100% !important;
+    min-height: 44px !important;
+    border-radius: 9999px !important;
+  }
+}
+

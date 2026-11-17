@@ -1,0 +1,194 @@
+/* ========================================================
+ * 9. Switches, Checkboxes, & Radio (Authentic Material 3)
+ * ======================================================== */
+
+/* --- Switches & Toggles (Material 3 Track & Thumb) --- */
+.Switch__root {
+  display: inline-flex !important;
+  align-items: center !important;
+  vertical-align: middle !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
+}
+
+.Switch__content {
+  position: relative !important;
+  width: 44px !important;
+  height: 24px !important;
+  min-width: 44px !important;
+  min-height: 24px !important;
+  border-radius: 9999px !important;
+  box-sizing: border-box !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+.Switch__thumb,
+.Switch__thumb--checked-true,
+.Switch__thumb--checked-false {
+  position: absolute !important;
+  top: 50% !important;
+  border-radius: 9999px !important;
+  border: none !important;
+  box-shadow: none !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+/* Switch Track & Thumb (Unchecked) */
+.Switch__content--checked-false,
+[data-state="unchecked"].Switch__content,
+.Switch__content[aria-checked="false"] {
+  background-color: var(--m3-surface-container-highest) !important;
+  border: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+.Switch__content--checked-false .Switch__thumb,
+[data-state="unchecked"] .Switch__thumb,
+.Switch__content[aria-checked="false"] .Switch__thumb {
+  width: 14px !important;
+  height: 14px !important;
+  left: 3px !important;
+  transform: translateY(-50%) !important;
+  background-color: #b4c2b5 !important;
+}
+
+/* Switch Track & Thumb (Checked) */
+.Switch__content--checked-true,
+[data-state="checked"].Switch__content,
+.Switch__content[aria-checked="true"] {
+  background-color: var(--m3-primary) !important;
+  border: 2px solid var(--m3-primary) !important;
+}
+
+.Switch__content--checked-true .Switch__thumb,
+[data-state="checked"] .Switch__thumb,
+.Switch__content[aria-checked="true"] .Switch__thumb {
+  width: 18px !important;
+  height: 18px !important;
+  left: calc(100% - 20px) !important;
+  transform: translateY(-50%) !important;
+  background-color: var(--m3-on-primary) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Switch Hover State */
+.Switch__content:hover {
+  filter: brightness(1.08) !important;
+}
+
+/* Switch Disabled State */
+.Switch__root--disabled-true,
+.Switch__content--disabled-true {
+  cursor: not-allowed !important;
+  opacity: 0.7 !important;
+}
+
+.Switch__root--disabled-true .Switch__content--checked-true {
+  background-color: rgba(163, 219, 167, 0.35) !important;
+  border: 2px solid transparent !important;
+}
+
+.Switch__root--disabled-true .Switch__thumb--checked-true {
+  background-color: var(--m3-primary) !important;
+  opacity: 0.85 !important;
+}
+
+/* --- Checkboxes (Material 3 Square with Rounded Corners) --- */
+.Checkbox__root {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  padding: 6px 10px !important;
+  border-radius: 9999px !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.Checkbox__root:hover {
+  background-color: rgba(163, 219, 167, 0.08) !important;
+}
+
+.Checkbox__inputWrapper {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  box-sizing: border-box !important;
+}
+
+.Checkbox__inputWrapper--checked-true,
+.Checkbox__iconWrapper--checked-true,
+.Checkbox__root--checked-true .Checkbox__inputWrapper {
+  background-color: var(--m3-primary) !important;
+  border: 2px solid var(--m3-primary) !important;
+}
+
+.Checkbox__inputWrapper--checked-false,
+.Checkbox__iconWrapper--checked-false,
+.Checkbox__root:not(.Checkbox__root--checked-true) .Checkbox__inputWrapper {
+  background-color: transparent !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.Checkbox__inputWrapper svg,
+.Checkbox__iconWrapper svg {
+  fill: var(--m3-on-primary) !important;
+  color: var(--m3-on-primary) !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* --- Radio Buttons (Material 3 Circle & Inner Dot) --- */
+.Radio__root {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  padding: 6px 12px !important;
+  border-radius: 9999px !important;
+  transition: background-color 0.15s ease !important;
+}
+
+.Radio__root:hover {
+  background-color: rgba(163, 219, 167, 0.08) !important;
+}
+
+.Radio__circle {
+  width: 20px !important;
+  height: 20px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+  box-sizing: border-box !important;
+}
+
+.Radio__circle--checked-true {
+  background-color: transparent !important;
+  border: 2px solid var(--m3-primary) !important;
+}
+
+.Radio__circle--checked-false {
+  background-color: transparent !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.Radio__innerCircle--checked-true {
+  background-color: var(--m3-primary) !important;
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+}
+
+.Radio__innerCircle--checked-false {
+  display: none !important;
+}
+
+

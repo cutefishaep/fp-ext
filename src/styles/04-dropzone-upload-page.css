@@ -1,0 +1,175 @@
+/* ========================================================
+ * 5. Dropzone & Halaman Photos & Videos
+ * ======================================================== */
+
+.Tabs__content {
+  width: 100% !important;
+}
+
+#panel-photo,
+.root-Svl6yE {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--m3-text-primary) !important;
+  width: 100% !important;
+}
+
+/* ========================================================
+ * 5. Dropzone & Halaman Photos & Videos (Material 3 Hero Dropzone)
+ * ======================================================== */
+
+.Tabs__content {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+#panel-photo,
+#panel-video,
+.Tabs__panel,
+.root-Svl6yE {
+  background: transparent !important;
+  background-color: transparent !important;
+  color: var(--m3-text-primary) !important;
+  width: 100% !important;
+  max-width: 800px !important;
+  margin: 0 auto !important;
+  padding-bottom: 0 !important;
+}
+
+/* Kotak Dropzone Foto & Video */
+.root-aYVSm9,
+[data-e2e="select_video_container"],
+[data-e2e="select_photo_container"],
+.upload-stage-wrap,
+div[class*="select_video_container"],
+div[class*="select_photo_container"],
+[class*="drop-zone"] {
+  background-color: var(--m3-surface-container-low) !important;
+  border: 1.5px dashed rgba(163, 219, 167, 0.35) !important;
+  border-radius: 20px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 44px 24px !important;
+  min-height: 380px !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.root-aYVSm9:hover,
+[data-e2e="select_video_container"]:hover,
+[data-e2e="select_photo_container"]:hover,
+.upload-stage-wrap:hover {
+  border-color: var(--m3-primary) !important;
+  background-color: var(--m3-surface-container) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Kontainer Icon di dalam Dropzone */
+.upload-card-icon,
+.icon-oFmzDn {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto !important;
+  max-width: fit-content !important;
+  margin: 0 auto 18px auto !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+.upload-card-icon img,
+.icon-oFmzDn img,
+.upload-card-icon svg,
+.icon-oFmzDn svg {
+  display: block !important;
+  margin: 0 auto !important;
+  width: 80px !important;
+  height: 80px !important;
+  object-fit: contain !important;
+}
+
+/* Kontainer teks & tombol di dalam dropzone */
+.upload-stage-container,
+.upload-text-container {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.upload-stage-title,
+.title-JttYX9 {
+  color: var(--m3-text-primary) !important;
+  font-size: 19px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.2px !important;
+  margin: 0 0 8px 0 !important;
+  text-align: center !important;
+  line-height: 1.3 !important;
+}
+
+.upload-stage-sub-title,
+.description-IcY9Qi {
+  color: var(--m3-text-secondary) !important;
+  font-size: 13.5px !important;
+  line-height: 1.45 !important;
+  max-width: 440px !important;
+  margin: 0 auto 24px auto !important;
+  text-align: center !important;
+}
+
+/* Tombol Utama Hero Upload ("Select videos" & "Select photos") */
+.upload-stage-btn,
+.root-aYVSm9 button,
+[data-e2e="select_video_container"] button,
+[data-e2e="select_photo_container"] button,
+.upload-stage-wrap button {
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 32px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  border-radius: 9999px !important;
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  border: none !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 180px !important;
+  max-width: 280px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.upload-stage-btn:hover,
+.root-aYVSm9 button:hover,
+[data-e2e="select_video_container"] button:hover,
+[data-e2e="select_photo_container"] button:hover,
+.upload-stage-wrap button:hover {
+  background-color: var(--m3-primary-hover) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+  transform: translateY(-1px) !important;
+}
+
+

@@ -1,0 +1,245 @@
+/* ========================================================
+ * 27. Home Page Material 3 Dark & Clean Flat Layout
+ * ======================================================== */
+
+/* Sembunyikan Floating Sound Notice Popover & Tooltip Pengganggu */
+.TUXTooltip-tooltip--primary,
+div[role="tooltip"].TUXTooltip-tooltip,
+div:has(> .TUXTooltip-tooltip--primary) {
+  display: none !important;
+}
+
+/* Profil Card Paling Atas (Container Utama Profil di Home) */
+div[data-tt="NewHome_Homepage_ResponsivePageMarginContainer"] > div[data-tt="NewHome_UserInfo_FlexRow"]:first-child {
+  background-color: #161b17 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  padding: 16px 20px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 16px !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+/* Inner UserInfo Flex Rows & Columns: Flat & Presisi */
+div[data-tt="NewHome_UserInfo_FlexColumn"],
+div.css-1f0vc8o {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+div.css-1ca2t14,
+div[data-tt="NewHome_UserInfo_FlexRow"].css-1ca2t14 {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Baris Statistik User: Likes, Followers, Following (Anti Patah Huruf) */
+div.css-1jouj2w,
+div[data-tt="NewHome_UserInfo_FlexRow"].css-1jouj2w {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  gap: 8px !important;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+div.css-1jouj2w::-webkit-scrollbar,
+div[data-tt="NewHome_UserInfo_FlexRow"].css-1jouj2w::-webkit-scrollbar {
+  display: none !important;
+}
+
+div.css-ezl6zw,
+div[data-tt="NewHome_UserInfo_FlexRow"].css-ezl6zw {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+div.css-ezl6zw *,
+div[data-tt="NewHome_UserInfo_FlexRow"].css-ezl6zw span {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  font-size: 13px !important;
+  color: #d1ded2 !important;
+}
+
+div.css-ezl6zw span[data-tt*="TUXText_17"] {
+  color: #a3dba7 !important;
+  font-weight: 700 !important;
+}
+
+div[data-tt="NewHome_UserInfo_Container"].css-36cz1w {
+  color: rgba(255, 255, 255, 0.25) !important;
+  font-weight: bold !important;
+  padding: 0 2px !important;
+}
+
+div[data-tt="NewHome_UserInfo_Hover"] *,
+span[data-tt="NewHome_UserInfo_TUXText"],
+.css-15ebqti,
+.css-v27ixu,
+div[data-tt="NewHome_UserInfo_FlexRow"] span,
+div[data-tt="NewHome_UserInfo_FlexRow"] div {
+  color: #f2f7f2 !important;
+}
+
+/* Section Headers ("Key metrics", "Recent posts", "Knowledge for you") */
+div.ew1qlk0 > span,
+div.e1k8csyb0 > span,
+div.e1lm4m5t0 > span,
+.TUXText--weight-bold {
+  color: #f2f7f2 !important;
+}
+
+/* SATU-SATUNYA KARTU: .content-container */
+.content-container,
+.content-container.css-1uipvfo {
+  background-color: #161b17 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* NETRALKAN SEMUA KONTEN / WRAPPER LUAR AGAR TIDAK DOUBLE/TRIPLE BOX */
+div.css-zqccja,
+div.css-6yw1ev,
+div.css-1vsl7up,
+div.e1k8csyb0,
+div.elmi3ha0,
+div.e5v54nh0,
+div.e1lm4m5t0,
+div.ew1qlk0,
+div.css-1uo9k9i,
+div.css-17s7hx,
+div.css-1vsl7up.e1o95kjx0,
+div[data-tt="components_AnalyticsCard_CardWrapper"],
+div[data-tt="components_AnalyticsCard_Container"],
+div.css-1eyva00,
+div.e5v54nh0.css-z8xhsi {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  outline: none !important;
+  padding: 0 !important;
+}
+
+/* Bagian dalam kartu: Flat & Tanpa border tumpuk */
+.content-container > div:not(:last-child) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Hilangkan border/overlay berlebih pada thumbnail gambar & video cover & avatar */
+div[data-tt="VideoCover_index_Absolute"],
+div[data-tt="components_Avatar_Absolute"],
+div[data-tt="components_InspirationItemCard_Absolute"],
+div[data-tt="components_ImageWithLoading_Absolute"],
+div[data-tt*="Absolute"]:has(> div),
+div.css-1twv01w,
+div.css-1bfge79,
+div.css-1va1o96 {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Metric Selector Buttons */
+button.css-1aflxop,
+div.css-tlecb3 button {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #f2f7f2 !important;
+}
+
+button.css-1aflxop:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important;
+}
+
+button.css-1aflxop span,
+button.css-1aflxop .TUXText {
+  color: #f2f7f2 !important;
+}
+
+div.css-tlecb3 > div[style*="border-bottom"],
+button.css-1aflxop[aria-selected="true"] {
+  border-bottom: 2px solid #a3dba7 !important;
+}
+
+button.css-1aflxop[aria-selected="true"] span {
+  color: #a3dba7 !important;
+}
+
+/* Text inside cards */
+div.e1k8csyb0 *,
+div.e1lm4m5t0 *,
+div.css-zqccja *,
+div.css-6yw1ev * {
+  color: #f2f7f2 !important;
+}
+
+/* ECharts canvas wrapper */
+div.echarts-for-react {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Mobile 1-Column Stacking */
+@media (max-width: 900px) {
+  div[data-tt="NewHome_Homepage_FlexRow"],
+  div.css-1sadv82 {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 16px !important;
+  }
+
+  div[data-tt="NewHome_Homepage_FlexColumn"],
+  div[data-tt="NewHome_Homepage_Container"],
+  div.css-1uo9k9i,
+  div.css-17s7hx {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+
