@@ -5,16 +5,5 @@
 !/asset/
 !/asset/**
 
-# Whitelist source + build tooling + docs
-!/src/
-!/src/**
-!/build.mjs
-!/README.md
-
-# Generated zips stay out of git (downloadable from GitHub Releases)
-!/build/
-!/build/**
-build/*.zip
-
 # Whitelist .gitignore
 !.gitignore
