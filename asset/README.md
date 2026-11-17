@@ -15,5 +15,5 @@ asset/
 └── engines/        # Script inti mekanisme kalibrasi 1:1 & network interceptor
     ├── patch.js            # Engine 5.0 Core (64-bit Duration Sentinel & chunk shifter, tanpa komentar)
     ├── sl-sr.js            # Engine 4.0 Direct Patch (dual audio AAC-LC & Lavf metadata)
-    └── soundsafe-hook.js   # Interceptor payload upload TikTok Studio
+    └── soundsafe-hook.js   # Library FRYMention — resolver @mention klikabel (UID asli via API TikTok), tanpa hook jaringan
 ```

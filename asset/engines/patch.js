@@ -11,6 +11,10 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const VERSION = '5.0';
+  // Status metode yang dibaca kartu Bypass Upload di content script.
+  // 'WORKING' = metode masih jalan (badge hijau). Ganti ke 'PATCHED' (atau lainnya)
+  // saat TikTok menambal metode ini — badge otomatis jadi MERAH.
+  const STATUS = 'WORKING';
   const ENCODER_TAG = 'Method From cutefish.my.id';
   const FOURCC_TOO = new Uint8Array([0xa9, 0x74, 0x6f, 0x6f]);
   const SENTINEL_FF = new Uint8Array([0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]);
@@ -787,6 +791,7 @@
   }
   return {
     version: VERSION,
+    status: STATUS,
     quickPatch,
     inspect,
     checkCompatibility,
