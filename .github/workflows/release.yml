@@ -61,8 +61,10 @@ jobs:
         run: |
           ZIP="build/fish-acceleration-v${{ steps.meta.outputs.version }}.zip"
           CRX="build/fish-acceleration-v${{ steps.meta.outputs.version }}.crx"
+          INTEGRITY="build/integrity.json"
           test -s "$ZIP"
           test -s "$CRX"
+          test -s "$INTEGRITY"
           node -e "
             const fs = require('fs');
             const crx = fs.readFileSync('${CRX}');
@@ -114,12 +116,13 @@ jobs:
           VER="${{ steps.meta.outputs.version }}"
           ZIP="build/fish-acceleration-v${VER}.zip"
           CRX="build/fish-acceleration-v${VER}.crx"
+          INTEGRITY="build/integrity.json"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP" "$CRX" --clobber
+            gh release upload "$TAG" "$ZIP" "$CRX" "$INTEGRITY" --clobber
             gh release edit "$TAG" --title "Fish Acceleration v${VER}" --notes-file release-notes.md
           else
-            gh release create "$TAG" "$ZIP" "$CRX" \
+            gh release create "$TAG" "$ZIP" "$CRX" "$INTEGRITY" \
               --title "Fish Acceleration v${VER}" \
               --notes-file release-notes.md \
               --latest

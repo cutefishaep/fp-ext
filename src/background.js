@@ -9,6 +9,169 @@
 
 const ALLOWED_STREAM_HOST_RE = /(?:^|\.)(tiktokcdn\.com|tiktokcdn-us\.com|akamaized\.net|tiktok\.com|tikwm\.com)$/i;
 const ALLOWED_TIKWM_HOST_RE = /(?:^|\.)tikwm\.com$/i;
+const GITHUB_LATEST_RELEASE_URL = 'https://api.github.com/repos/cutefishaep/fp-ext/releases/latest';
+const TIKTOK_STUDIO_URL_RE = /^https:\/\/([^/]+\.)?tiktok\.com\/(tiktokstudio(\/|$|\?|#)|upload(\/|$|\?|#))/i;
+const SESSION_VERIFIED_KEY = 'fa_verified_session';
+const LOCAL_UPDATE_CACHE_KEY = 'fa_update_cache';
+
+const compareVersions = (a, b) => {
+  const pa = String(a || '').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+  const pb = String(b || '').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const va = pa[i] || 0;
+    const vb = pb[i] || 0;
+    if (va > vb) return 1;
+    if (va < vb) return -1;
+  }
+  return 0;
+};
+
+const sha256HexBuffer = async (arrayBuffer) => {
+  const hash = await crypto.subtle.digest('SHA-256', arrayBuffer);
+  const bytes = new Uint8Array(hash);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0');
+  }
+  return hex;
+};
+
+const handleCheckAndVerifyUpdate = async () => {
+  const currentVersion = chrome.runtime.getManifest().version;
+  let release;
+  try {
+    const res = await fetch(GITHUB_LATEST_RELEASE_URL, {
+      headers: { Accept: 'application/vnd.github+json' },
+      cache: 'no-store'
+    });
+    if (!res.ok) {
+      return {
+        status: 'offline',
+        currentVersion,
+        error: `GitHub returned HTTP ${res.status}.`
+      };
+    }
+    release = await res.json();
+  } catch (err) {
+    return {
+      status: 'offline',
+      currentVersion,
+      error: err?.message || 'Unable to reach GitHub Releases.'
+    };
+  }
+
+  const latestVersion = String(release?.tag_name || '').replace(/^v/i, '');
+  const releaseUrl = release?.html_url || 'https://github.com/cutefishaep/fp-ext/releases';
+  const assets = Array.isArray(release?.assets) ? release.assets : [];
+  const zipAsset = assets.find((a) => /\.zip$/i.test(a?.name || ''));
+  const integrityAsset = assets.find((a) => a?.name === 'integrity.json');
+
+  let integrityData = null;
+  if (integrityAsset?.browser_download_url) {
+    try {
+      const intRes = await fetch(integrityAsset.browser_download_url, { cache: 'no-store' });
+      if (intRes.ok) integrityData = await intRes.json();
+    } catch (_) {}
+  }
+
+  let actualPkgSha = '';
+  let expectedPkgSha = '';
+  if (zipAsset?.browser_download_url) {
+    expectedPkgSha = String(zipAsset.digest || '').replace(/^sha256:/i, '').trim() ||
+      String(integrityData?.packages?.zip?.sha256 || '').trim();
+    try {
+      const zipRes = await fetch(zipAsset.browser_download_url, { cache: 'no-store' });
+      if (!zipRes.ok) {
+        return {
+          status: 'offline',
+          currentVersion,
+          latestVersion,
+          error: `Failed to download release asset (HTTP ${zipRes.status}).`
+        };
+      }
+      const buf = await zipRes.arrayBuffer();
+      actualPkgSha = await sha256HexBuffer(buf);
+    } catch (err) {
+      return {
+        status: 'offline',
+        currentVersion,
+        latestVersion,
+        error: err?.message || 'Failed to download release asset.'
+      };
+    }
+
+    if (expectedPkgSha && actualPkgSha.toLowerCase() !== expectedPkgSha.toLowerCase()) {
+      return {
+        status: 'sha_mismatch',
+        mismatchSource: 'package',
+        currentVersion,
+        latestVersion,
+        expectedSha: expectedPkgSha.toLowerCase(),
+        actualSha: actualPkgSha.toLowerCase(),
+        mismatchedFiles: [zipAsset.name],
+        zipName: zipAsset.name,
+        downloadUrl: zipAsset.browser_download_url,
+        releaseUrl
+      };
+    }
+  }
+
+  if (integrityData && integrityData.files && compareVersions(integrityData.version, currentVersion) === 0) {
+    const mismatches = [];
+    for (const [fileName, expectedHash] of Object.entries(integrityData.files)) {
+      if (!expectedHash) continue;
+      try {
+        const localRes = await fetch(chrome.runtime.getURL(fileName), { cache: 'no-store' });
+        if (!localRes.ok) {
+          mismatches.push({ file: fileName, expected: String(expectedHash).toLowerCase(), actual: 'missing' });
+          continue;
+        }
+        const ab = await localRes.arrayBuffer();
+        const actualHash = await sha256HexBuffer(ab);
+        if (actualHash.toLowerCase() !== String(expectedHash).toLowerCase()) {
+          mismatches.push({ file: fileName, expected: String(expectedHash).toLowerCase(), actual: actualHash.toLowerCase() });
+        }
+      } catch (_) {
+        mismatches.push({ file: fileName, expected: String(expectedHash).toLowerCase(), actual: 'unreadable' });
+      }
+    }
+
+    if (mismatches.length > 0) {
+      return {
+        status: 'sha_mismatch',
+        mismatchSource: 'local',
+        currentVersion,
+        latestVersion,
+        expectedSha: mismatches[0].expected,
+        actualSha: mismatches[0].actual,
+        mismatchedFiles: mismatches.map((m) => m.file),
+        zipName: zipAsset?.name || '',
+        downloadUrl: zipAsset?.browser_download_url || '',
+        releaseUrl
+      };
+    }
+  }
+
+  const cachePayload = {
+    checkedAt: Date.now(),
+    currentVersion,
+    latestVersion,
+    releaseUrl,
+    zipName: zipAsset?.name || '',
+    downloadUrl: zipAsset?.browser_download_url || '',
+    packageSha256: actualPkgSha || expectedPkgSha || ''
+  };
+  try {
+    await chrome.storage?.local?.set({ [LOCAL_UPDATE_CACHE_KEY]: cachePayload });
+  } catch (_) {}
+
+  const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
+  return {
+    status: hasUpdate ? 'update_available' : 'ok',
+    ...cachePayload
+  };
+};
 
 const isAllowedUrl = (rawUrl, hostPattern) => {
   if (!rawUrl || typeof rawUrl !== 'string') return false;
@@ -266,10 +429,71 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   };
 };
 
+chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
+  const candidateUrl = changeInfo.url || (changeInfo.status === 'loading' ? tab?.url : null);
+  if (!candidateUrl || !TIKTOK_STUDIO_URL_RE.test(candidateUrl)) return;
+
+  const currentVersion = chrome.runtime.getManifest().version;
+  chrome.storage?.session?.get(SESSION_VERIFIED_KEY, (data) => {
+    const sess = data?.[SESSION_VERIFIED_KEY];
+    if (sess && sess.verified && sess.version === currentVersion) return;
+    const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
+    chrome.tabs.update(tabId, { url: gateUrl });
+  });
+});
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (!message || message.type !== 'PROBE_VIDEO') return false;
-  handleProbeVideo(message)
-    .then((result) => sendResponse(result))
-    .catch(() => sendResponse(null));
-  return true;
+  if (!message || !message.type) return false;
+
+  if (message.type === 'PROBE_VIDEO') {
+    handleProbeVideo(message)
+      .then((result) => sendResponse(result))
+      .catch(() => sendResponse(null));
+    return true;
+  }
+
+  if (message.type === 'CHECK_AND_VERIFY_UPDATE') {
+    handleCheckAndVerifyUpdate()
+      .then((result) => sendResponse(result))
+      .catch((err) => sendResponse({
+        status: 'offline',
+        currentVersion: chrome.runtime.getManifest().version,
+        error: err?.message || 'Unexpected verification error.'
+      }));
+    return true;
+  }
+
+  if (message.type === 'DOWNLOAD_VERIFIED_ZIP') {
+    if (!message.url || !chrome.downloads?.download) {
+      sendResponse({ ok: false, error: 'Download API unavailable.' });
+      return false;
+    }
+    chrome.downloads.download({
+      url: message.url,
+      filename: message.filename || undefined,
+      saveAs: false
+    }, (downloadId) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
+      } else {
+        sendResponse({ ok: true, downloadId });
+      }
+    });
+    return true;
+  }
+
+  if (message.type === 'APPROVE_SESSION') {
+    const payload = {
+      version: chrome.runtime.getManifest().version,
+      verified: true,
+      bypassed: Boolean(message.bypassed),
+      verifiedAt: Date.now()
+    };
+    chrome.storage?.session?.set({ [SESSION_VERIFIED_KEY]: payload }, () => {
+      sendResponse({ ok: true });
+    });
+    return true;
+  }
+
+  return false;
 });

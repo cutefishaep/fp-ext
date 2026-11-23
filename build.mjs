@@ -272,7 +272,19 @@ function packZipAndCrx() {
     }
   }
 
-  const runtimeFiles = ['manifest.json', 'content.js', 'isolated.js', 'background.js', 'content.css', 'rules.json'];
+  const runtimeFiles = [
+    'manifest.json',
+    'content.js',
+    'isolated.js',
+    'background.js',
+    'content.css',
+    'rules.json',
+    'ui-m3.css',
+    'popup.html',
+    'popup.js',
+    'updater.html',
+    'updater.js'
+  ];
   const files = runtimeFiles.map((name) => ({
     name,
     data: readFileSync(join(root, 'src', name))
@@ -294,6 +306,23 @@ function packZipAndCrx() {
   writeFileSync(crxPath, crxBuffer);
   const crxKb = (crxBuffer.length / 1024).toFixed(1);
   console.log(`✓ build/${crxName.padEnd(30)} CRX3      (${crxKb} KB, key: ${source})`);
+
+  const sha256Hex = (buf) => createHash('sha256').update(buf).digest('hex');
+  const fileHashes = {};
+  for (const f of files) {
+    fileHashes[f.name] = sha256Hex(f.data);
+  }
+  const integrity = {
+    version: manifest.version,
+    generatedAt: new Date().toISOString(),
+    packages: {
+      zip: { name: zipName, sha256: sha256Hex(zipBuffer) },
+      crx: { name: crxName, sha256: sha256Hex(crxBuffer) }
+    },
+    files: fileHashes
+  };
+  writeFileSync(join(outDir, 'integrity.json'), JSON.stringify(integrity, null, 2) + '\n', 'utf8');
+  console.log(`✓ build/integrity.json                 SHA-256   (${Object.keys(fileHashes).length} files + 2 packages)`);
 }
 
 console.log('Building Fish Acceleration...');

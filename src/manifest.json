@@ -9,16 +9,25 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Fish Acceleration"
+  },
   "permissions": [
     "declarativeNetRequest",
-    "storage"
+    "storage",
+    "tabs",
+    "downloads"
   ],
   "host_permissions": [
     "*://*.tiktok.com/*",
     "*://*.tiktokcdn.com/*",
     "*://*.tiktokcdn-us.com/*",
     "*://*.akamaized.net/*",
-    "*://*.tikwm.com/*"
+    "*://*.tikwm.com/*",
+    "https://api.github.com/*",
+    "https://github.com/*",
+    "https://objects.githubusercontent.com/*"
   ],
   "background": {
     "service_worker": "background.js"
