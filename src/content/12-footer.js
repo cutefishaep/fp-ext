@@ -149,6 +149,7 @@
         methodId: msg.methodId || 'fish',
         compressMode: msg.compressMode || 'off',
         doBypass: msg.doBypass !== false,
+        watermark: msg.watermark || '',
         compressCfg: msg.compressConfig || null,
         _tktk: _tktkShim,
         onProgress: emitProgress

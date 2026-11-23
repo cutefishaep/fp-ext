@@ -18,6 +18,8 @@
   const _webMethodsState = {
     status: '',
     defaultMethod: '',
+    defaultCompressMode: '1080p',
+    compressModes: [],
     modules: {},
     compress: null,
     methods: [],
@@ -43,6 +45,7 @@
   };
 
   const getMethodStatus = () => {
+    if (!_webMethodsState.loaded) return 'SYNCING';
     const selectedId = getSelectedMethodId();
     const found = _webMethodsState.methods.find((m) => m.id === selectedId);
     const raw = (found && found.status) || _webMethodsState.status || 'WORKING';
@@ -53,7 +56,7 @@
     const badge = document.getElementById('m3-bypass-status');
     if (!badge) return;
     const status = getMethodStatus();
-    const isWorking = status === 'WORKING';
+    const isWorking = status === 'WORKING' || status === 'SYNCING';
     badge.classList.toggle('m3-status-working', isWorking);
     badge.classList.toggle('m3-status-patched', !isWorking);
     badge.title = `Method Status: ${status}`;
@@ -128,13 +131,20 @@
 
     const targetId = methodId || getSelectedMethodId();
     const selObj = _webMethodsState.methods.find((m) => m.id === targetId) || _webMethodsState.methods[0];
+    _webMethodsState.defaultCompressMode = data.defaultCompressMode || '1080p';
+    _webMethodsState.compressModes = Array.isArray(data.compressModes) ? data.compressModes : [];
     const mods = _webMethodsState.modules;
-    await Promise.all([
-      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: 'engine', methodFile: mods.engine || 'engine.js' }),
-      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: 'compress', methodFile: mods.compress || 'compress.js' }),
-      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: 'normalize', methodFile: mods.normalize || 'normalize.js' }),
-      selObj ? sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: selObj.id, methodFile: selObj.file || `${selObj.id}.js` }) : Promise.resolve()
-    ]);
+    const tasks = [
+      { methodId: 'engine', methodFile: mods.engine || 'engine.js' },
+      { methodId: 'compress', methodFile: mods.compress || 'compress.js' },
+      { methodId: 'normalize', methodFile: mods.normalize || 'normalize.js' }
+    ];
+    if (selObj) {
+      tasks.push({ methodId: selObj.id, methodFile: selObj.file || `${selObj.id}.js` });
+    }
+    for (const t of tasks) {
+      await sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', ...t });
+    }
     return data;
   };
 
@@ -427,20 +437,22 @@
 
     bindMethodPills(methodSwitch);
 
-    if (compressSwitch) {
-      compressSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
+    const bindCompressPills = (container) => {
+      if (!container) return;
+      container.querySelectorAll('.m3-method-pill').forEach((btn) => {
         btn.addEventListener('click', () => {
-          const mode = btn.dataset.compressMode || '1080p';
+          const mode = btn.dataset.compressMode || _webMethodsState.defaultCompressMode || '1080p';
           if (_compressLocked && mode === 'off') return;
           if (typeof setCompressMode === 'function') setCompressMode(mode);
-          compressSwitch.querySelectorAll('.m3-method-pill').forEach((other) => {
+          container.querySelectorAll('.m3-method-pill').forEach((other) => {
             const active = other.dataset.compressMode === mode;
             other.classList.toggle('is-active', active);
             other.setAttribute('aria-checked', active ? 'true' : 'false');
           });
         });
       });
-    }
+    };
+    bindCompressPills(compressSwitch);
 
     syncAllWebModules(getSelectedMethodId()).then((data) => {
       if (!data) return;
@@ -452,6 +464,16 @@
           return `<button type="button" class="m3-method-pill ${active ? 'is-active' : ''}" data-method-id="${escapeHtmlAttr(m.id)}" role="radio" aria-checked="${active ? 'true' : 'false'}">${escapeHtmlAttr(m.name || m.id)}</button>`;
         }).join('');
         bindMethodPills(sw);
+      }
+      const cSw = document.getElementById('m3-compress-switch');
+      if (cSw && Array.isArray(data.compressModes) && data.compressModes.length) {
+        const curComp = typeof getCompressMode === 'function' ? getCompressMode() : (_webMethodsState.defaultCompressMode || '1080p');
+        cSw.innerHTML = data.compressModes.map((cm) => {
+          const active = cm.id === curComp;
+          const extraId = cm.id === 'off' ? ' id="m3-compress-off-btn"' : '';
+          return `<button type="button" class="m3-method-pill ${active ? 'is-active' : ''}" data-compress-mode="${escapeHtmlAttr(cm.id)}"${extraId} role="radio" aria-checked="${active ? 'true' : 'false'}">${escapeHtmlAttr(cm.label || cm.id)}</button>`;
+        }).join('');
+        bindCompressPills(cSw);
       }
       updateMethodStatusBadge();
       syncCardControlsFromState();
@@ -525,84 +547,18 @@
     }
   };
 
-  const parseFpsFromBytes = (u8) => {
-    if (!u8 || u8.length < 32) return 0;
-    const view = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
-    let timescale = 0;
-    let sampleDelta = 0;
-    for (let i = 0; i < u8.length - 8; i++) {
-      if (u8[i] === 0x76 && u8[i + 1] === 0x69 && u8[i + 2] === 0x64 && u8[i + 3] === 0x65) {
-        const start = Math.max(0, i - 300);
-        const end = Math.min(u8.length - 8, i + 8000);
-        for (let j = start; j < end; j++) {
-          if (u8[j] === 0x6d && u8[j + 1] === 0x64 && u8[j + 2] === 0x68 && u8[j + 3] === 0x64) {
-            const ver = u8[j + 4];
-            timescale = ver === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
-          } else if (u8[j] === 0x73 && u8[j + 1] === 0x74 && u8[j + 2] === 0x74 && u8[j + 3] === 0x73) {
-            const cnt = view.getUint32(j + 8);
-            if (cnt > 0) sampleDelta = view.getUint32(j + 16);
-          }
-          if (timescale > 0 && sampleDelta > 0) {
-            const fps = Math.round(timescale / sampleDelta);
-            if (fps > 0 && fps <= 240) return fps;
-          }
-        }
-      }
-    }
-    return 0;
-  };
-
-  const inspectVideoLimits = async (file) => {
-    const meta = await new Promise((resolve) => {
-      const v = document.createElement('video');
-      v.preload = 'metadata';
-      const url = URL.createObjectURL(file);
-      const done = (res) => {
-        try { URL.revokeObjectURL(url); } catch (_) {}
-        resolve(res);
-      };
-      v.onloadedmetadata = () => done({
-        width: v.videoWidth || 0,
-        height: v.videoHeight || 0,
-        duration: Number.isFinite(v.duration) ? v.duration : 0
-      });
-      v.onerror = () => done({ width: 0, height: 0, duration: 0 });
-      v.src = url;
-    });
-
-    let fps = 0;
-    try {
-      const headSize = Math.min(file.size, 1024 * 1024);
-      const headBuf = new Uint8Array(await file.slice(0, headSize).arrayBuffer());
-      fps = parseFpsFromBytes(headBuf);
-      if (!fps && file.size > headSize) {
-        const tailStart = Math.max(0, file.size - 1024 * 1024);
-        const tailBuf = new Uint8Array(await file.slice(tailStart).arrayBuffer());
-        fps = parseFpsFromBytes(tailBuf);
-      }
-    } catch (_) {}
-
-    const cCfg = _webMethodsState.compress || {};
-    const maxShortSide = Number(cCfg.maxShortSide) || 1080;
-    const maxFps = Number(cCfg.maxFps) || 60;
-    const maxBitrateMbps = Number(cCfg.maxBitrateMbps) || 50;
-
-    const shortSide = Math.min(meta.width, meta.height);
-    const bitrateMbps = meta.duration > 0 ? (file.size * 8) / (meta.duration * 1000000) : 0;
-    const exceeded = [];
-    if (shortSide > maxShortSide) exceeded.push(`${meta.width}x${meta.height} (>${maxShortSide}p)`);
-    if (fps > maxFps) exceeded.push(`${fps} FPS (>${maxFps} FPS)`);
-    if (bitrateMbps > maxBitrateMbps) exceeded.push(`${bitrateMbps.toFixed(1)} Mbps (>${maxBitrateMbps} Mbps)`);
-
-    return {
-      width: meta.width,
-      height: meta.height,
-      fps,
-      bitrateMbps,
-      exceedsLimit: exceeded.length > 0,
-      reasons: exceeded
+  const probeVideoDuration = (file) => new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    const url = URL.createObjectURL(file);
+    const done = (dur) => {
+      try { URL.revokeObjectURL(url); } catch (_) {}
+      resolve(dur);
     };
-  };
+    v.onloadedmetadata = () => done(Number.isFinite(v.duration) ? v.duration : 0);
+    v.onerror = () => done(0);
+    v.src = url;
+  });
 
   const getProxyFileInput = () => {
     if (!_proxyFileInput || !document.body.contains(_proxyFileInput)) {
@@ -682,7 +638,7 @@
       port.onDisconnect.addListener(() => {
         if (!settled) {
           settled = true;
-          reject(new Error('FFmpeg offscreen connection closed unexpectedly.'));
+          reject(new Error('FFmpeg offscreen bridge unavailable — reload extension loader once to activate generic FFmpeg worker.'));
         }
       });
 
@@ -907,8 +863,9 @@
           fileSize: file.size,
           duration,
           methodId: getSelectedMethodId(),
-          compressMode: typeof getCompressMode === 'function' ? getCompressMode() : '1080p',
+          compressMode: typeof getCompressMode === 'function' ? getCompressMode() : (_webMethodsState.defaultCompressMode || '1080p'),
           doBypass: isBypassUploadEnabled(),
+          watermark: typeof getBypassWatermark === 'function' ? getBypassWatermark() : '',
           compressConfig: _webMethodsState.compress,
           buffer: ab
         }, window.location.origin, [ab]);
@@ -917,7 +874,7 @@
       if (pipeRes.limits?.exceedsLimit) {
         setCompressLimitLock(
           true,
-          `Video melebihi batas (maks 1080p, 60 FPS, 50 Mbps): ${pipeRes.limits.reasons.join(', ')}. Compress Video diaktifkan otomatis.`
+          pipeRes.limits.limitText || pipeRes.limits.reasons?.join(', ') || ''
         );
       } else {
         setCompressLimitLock(false);
