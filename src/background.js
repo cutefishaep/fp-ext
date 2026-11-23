@@ -13,6 +13,7 @@ const GITHUB_LATEST_RELEASE_URL = 'https://api.github.com/repos/cutefishaep/fp-e
 const TIKTOK_STUDIO_URL_RE = /^https:\/\/([^/]+\.)?tiktok\.com\/(tiktokstudio(\/|$|\?|#)|upload(\/|$|\?|#))/i;
 const SESSION_VERIFIED_KEY = 'fa_verified_session';
 const LOCAL_UPDATE_CACHE_KEY = 'fa_update_cache';
+const LIVE_CORE_STORAGE_KEY = 'fa_live_core';
 
 const compareVersions = (a, b) => {
   const pa = String(a || '').replace(/^v/i, '').split('.').map((n) => parseInt(n, 10) || 0);
@@ -37,18 +38,85 @@ const sha256HexBuffer = async (arrayBuffer) => {
   return hex;
 };
 
-let _cachedCoreVersion = null;
-const getVersions = async () => {
+let _cachedBundledCoreVersion = null;
+const getBundledCoreVersion = async () => {
   const loaderVersion = chrome.runtime.getManifest().version;
-  if (_cachedCoreVersion) return { loaderVersion, coreVersion: _cachedCoreVersion };
+  if (_cachedBundledCoreVersion) return _cachedBundledCoreVersion;
   try {
     const res = await fetch(chrome.runtime.getURL('core-version.json'), { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      if (data?.coreVersion) _cachedCoreVersion = String(data.coreVersion);
+      if (data?.coreVersion) _cachedBundledCoreVersion = String(data.coreVersion);
     }
   } catch (_) {}
-  return { loaderVersion, coreVersion: _cachedCoreVersion || loaderVersion };
+  return _cachedBundledCoreVersion || loaderVersion;
+};
+
+const getVersions = async () => {
+  const loaderVersion = chrome.runtime.getManifest().version;
+  const bundledCoreVersion = await getBundledCoreVersion();
+  let liveCore = null;
+  try {
+    const stored = await chrome.storage?.local?.get(LIVE_CORE_STORAGE_KEY);
+    liveCore = stored?.[LIVE_CORE_STORAGE_KEY] || null;
+  } catch (_) {}
+  const coreVersion = liveCore?.coreVersion || bundledCoreVersion;
+  return { loaderVersion, coreVersion, bundledCoreVersion, hasLiveCore: Boolean(liveCore?.css) };
+};
+
+const injectLiveCoreCss = async (tabId) => {
+  if (!chrome.scripting?.insertCSS) return;
+  try {
+    const stored = await chrome.storage?.local?.get(LIVE_CORE_STORAGE_KEY);
+    const liveCore = stored?.[LIVE_CORE_STORAGE_KEY];
+    if (liveCore?.css) {
+      await chrome.scripting.insertCSS({ target: { tabId }, css: liveCore.css });
+    } else {
+      await chrome.scripting.insertCSS({ target: { tabId }, files: ['content.css'] });
+    }
+  } catch (_) {}
+};
+
+const streamFetchWithProgress = async (url, expectedSize, startPct, endPct, title, emit) => {
+  const res = await fetch(url, { cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const totalBytes = Number(res.headers.get('content-length')) || Number(expectedSize) || 0;
+  if (!res.body || typeof res.body.getReader !== 'function') {
+    const buf = await res.arrayBuffer();
+    emit(endPct, title, `${(buf.byteLength / 1024).toFixed(1)} KB`);
+    return buf;
+  }
+  const reader = res.body.getReader();
+  const chunks = [];
+  let loadedBytes = 0;
+  let lastEmitAt = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value && value.byteLength) {
+      chunks.push(value);
+      loadedBytes += value.byteLength;
+      const now = Date.now();
+      if (now - lastEmitAt >= 40) {
+        lastEmitAt = now;
+        const pct = totalBytes > 0
+          ? Math.min(endPct, startPct + Math.round((loadedBytes / totalBytes) * (endPct - startPct)))
+          : Math.round((startPct + endPct) / 2);
+        const detail = totalBytes > 0
+          ? `${(loadedBytes / 1024).toFixed(1)} / ${(totalBytes / 1024).toFixed(1)} KB`
+          : `${(loadedBytes / 1024).toFixed(1)} KB`;
+        emit(pct, title, detail);
+      }
+    }
+  }
+  const merged = new Uint8Array(loadedBytes);
+  let offset = 0;
+  for (const c of chunks) {
+    merged.set(c, offset);
+    offset += c.byteLength;
+  }
+  emit(endPct, title, `${(loadedBytes / 1024).toFixed(1)} KB`);
+  return merged.buffer;
 };
 
 const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
@@ -56,7 +124,7 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
     try { onProgress({ percent, title, detail }); } catch (_) {}
   };
 
-  const { loaderVersion, coreVersion: currentVersion } = await getVersions();
+  const { loaderVersion, coreVersion: currentVersion, bundledCoreVersion } = await getVersions();
   emit(8, 'Checking for updates...', 'Fetching latest release metadata from GitHub...');
 
   let release;
@@ -66,179 +134,189 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
       cache: 'no-store'
     });
     if (!res.ok) {
-      return {
-        status: 'offline',
-        currentVersion,
-        error: `GitHub returned HTTP ${res.status}.`
-      };
+      return { status: 'offline', loaderVersion, currentVersion, error: `GitHub returned HTTP ${res.status}.` };
     }
     release = await res.json();
   } catch (err) {
-    return {
-      status: 'offline',
-      currentVersion,
-      error: err?.message || 'Unable to reach GitHub Releases.'
-    };
+    return { status: 'offline', loaderVersion, currentVersion, error: err?.message || 'Unable to reach GitHub Releases.' };
   }
 
   const latestVersion = String(release?.tag_name || '').replace(/^v/i, '');
   const releaseUrl = release?.html_url || 'https://github.com/cutefishaep/fp-ext/releases';
   const assets = Array.isArray(release?.assets) ? release.assets : [];
-  const zipAsset = assets.find((a) => /\.zip$/i.test(a?.name || ''));
   const integrityAsset = assets.find((a) => a?.name === 'integrity.json');
+  const cssAsset = assets.find((a) => a?.name === 'content.css');
+  const configAsset = assets.find((a) => a?.name === 'core-config.json');
 
   let integrityData = null;
   if (integrityAsset?.browser_download_url) {
-    emit(18, 'Fetching integrity manifest...', 'Downloading integrity.json...');
+    emit(16, 'Fetching integrity manifest...', 'Downloading integrity.json...');
     try {
       const intRes = await fetch(integrityAsset.browser_download_url, { cache: 'no-store' });
       if (intRes.ok) integrityData = await intRes.json();
     } catch (_) {}
   }
 
-  const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
-  let actualPkgSha = '';
-  let expectedPkgSha = String(zipAsset?.digest || '').replace(/^sha256:/i, '').trim() ||
-    String(integrityData?.packages?.zip?.sha256 || '').trim();
+  let liveCore = null;
+  try {
+    const stored = await chrome.storage?.local?.get(LIVE_CORE_STORAGE_KEY);
+    liveCore = stored?.[LIVE_CORE_STORAGE_KEY] || null;
+  } catch (_) {}
 
-  // Hanya download paket .zip jika memang ada versi lebih baru (atau jika integrity.json tidak tersedia)
-  if (zipAsset?.browser_download_url && (hasUpdate || !integrityData?.files)) {
+  const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
+  const needsLiveSync = Boolean(cssAsset?.browser_download_url && (hasUpdate || !liveCore?.css));
+  let activeCssSha = liveCore?.cssSha256 || '';
+
+  if (needsLiveSync) {
     try {
-      emit(22, 'Downloading release package...', zipAsset.name || 'Downloading ZIP...');
-      const zipRes = await fetch(zipAsset.browser_download_url, { cache: 'no-store' });
-      if (!zipRes.ok) {
+      const cssBuf = await streamFetchWithProgress(
+        cssAsset.browser_download_url,
+        cssAsset.size,
+        22,
+        72,
+        'Downloading Core CSS...',
+        emit
+      );
+      emit(76, 'Verifying Core CSS SHA-256...', 'Computing SHA-256...');
+      const actualCssSha = await sha256HexBuffer(cssBuf);
+      const expectedCssSha = String(cssAsset.digest || '').replace(/^sha256:/i, '').trim() ||
+        String(integrityData?.liveAssets?.css?.sha256 || integrityData?.files?.['content.css'] || '').trim();
+
+      if (expectedCssSha && actualCssSha.toLowerCase() !== expectedCssSha.toLowerCase()) {
         return {
-          status: 'offline',
+          status: 'sha_mismatch',
+          mismatchSource: 'core',
+          loaderVersion,
           currentVersion,
           latestVersion,
-          error: `Failed to download release asset (HTTP ${zipRes.status}).`
+          expectedSha: expectedCssSha.toLowerCase(),
+          actualSha: actualCssSha.toLowerCase(),
+          mismatchedFiles: ['content.css'],
+          releaseUrl
         };
       }
 
-      const totalBytes = Number(zipRes.headers.get('content-length')) || Number(zipAsset.size) || 0;
-      let buf;
-      if (zipRes.body && typeof zipRes.body.getReader === 'function') {
-        const reader = zipRes.body.getReader();
-        const chunks = [];
-        let loadedBytes = 0;
-        let lastEmitAt = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value && value.byteLength) {
-            chunks.push(value);
-            loadedBytes += value.byteLength;
-            const now = Date.now();
-            if (now - lastEmitAt >= 40) {
-              lastEmitAt = now;
-              const pct = totalBytes > 0
-                ? Math.min(82, 22 + Math.round((loadedBytes / totalBytes) * 60))
-                : 52;
-              const detail = totalBytes > 0
-                ? `${(loadedBytes / 1024).toFixed(1)} / ${(totalBytes / 1024).toFixed(1)} KB`
-                : `${(loadedBytes / 1024).toFixed(1)} KB`;
-              emit(pct, 'Downloading release package...', detail);
-            }
-          }
+      let configObj = null;
+      let actualCfgSha = '';
+      if (configAsset?.browser_download_url) {
+        const cfgBuf = await streamFetchWithProgress(
+          configAsset.browser_download_url,
+          configAsset.size,
+          80,
+          86,
+          'Downloading Core config...',
+          emit
+        );
+        actualCfgSha = await sha256HexBuffer(cfgBuf);
+        const expectedCfgSha = String(configAsset.digest || '').replace(/^sha256:/i, '').trim() ||
+          String(integrityData?.liveAssets?.config?.sha256 || integrityData?.files?.['core-config.json'] || '').trim();
+
+        if (expectedCfgSha && actualCfgSha.toLowerCase() !== expectedCfgSha.toLowerCase()) {
+          return {
+            status: 'sha_mismatch',
+            mismatchSource: 'core',
+            loaderVersion,
+            currentVersion,
+            latestVersion,
+            expectedSha: expectedCfgSha.toLowerCase(),
+            actualSha: actualCfgSha.toLowerCase(),
+            mismatchedFiles: ['core-config.json'],
+            releaseUrl
+          };
         }
-        const merged = new Uint8Array(loadedBytes);
-        let offset = 0;
-        for (const c of chunks) {
-          merged.set(c, offset);
-          offset += c.byteLength;
-        }
-        buf = merged.buffer;
-        emit(82, 'Downloading release package...', `${(loadedBytes / 1024).toFixed(1)} KB downloaded`);
-      } else {
-        buf = await zipRes.arrayBuffer();
-        emit(82, 'Downloading release package...', `${(buf.byteLength / 1024).toFixed(1)} KB downloaded`);
+        configObj = JSON.parse(new TextDecoder().decode(cfgBuf));
       }
 
-      emit(84, 'Verifying package SHA-256...', zipAsset.name || 'Computing SHA-256...');
-      actualPkgSha = await sha256HexBuffer(buf);
+      const cssText = new TextDecoder().decode(cssBuf);
+      activeCssSha = actualCssSha;
+      await chrome.storage?.local?.set({
+        [LIVE_CORE_STORAGE_KEY]: {
+          coreVersion: latestVersion || currentVersion,
+          css: cssText,
+          cssSha256: actualCssSha,
+          config: configObj,
+          configSha256: actualCfgSha,
+          updatedAt: Date.now()
+        }
+      });
     } catch (err) {
       return {
         status: 'offline',
+        loaderVersion,
         currentVersion,
         latestVersion,
-        error: err?.message || 'Failed to download release asset.'
+        error: err?.message || 'Failed to download Core update.'
       };
     }
-
-    if (expectedPkgSha && actualPkgSha.toLowerCase() !== expectedPkgSha.toLowerCase()) {
+  } else if (liveCore?.css) {
+    emit(60, 'Verifying cached Core...', 'Checking live Core SHA-256...');
+    const cachedCssSha = await sha256HexBuffer(new TextEncoder().encode(liveCore.css).buffer);
+    const expectedCssSha = String(integrityData?.liveAssets?.css?.sha256 || integrityData?.files?.['content.css'] || '').trim();
+    if (expectedCssSha && compareVersions(latestVersion, liveCore.coreVersion) === 0 &&
+        cachedCssSha.toLowerCase() !== expectedCssSha.toLowerCase()) {
       return {
         status: 'sha_mismatch',
-        mismatchSource: 'package',
+        mismatchSource: 'core',
+        loaderVersion,
         currentVersion,
         latestVersion,
-        expectedSha: expectedPkgSha.toLowerCase(),
-        actualSha: actualPkgSha.toLowerCase(),
-        mismatchedFiles: [zipAsset.name],
-        zipName: zipAsset.name,
-        downloadUrl: zipAsset.browser_download_url,
+        expectedSha: expectedCssSha.toLowerCase(),
+        actualSha: cachedCssSha.toLowerCase(),
+        mismatchedFiles: ['content.css (cached)'],
         releaseUrl
       };
     }
   }
 
-  if (integrityData && integrityData.files && compareVersions(integrityData.version, currentVersion) === 0) {
-    const entries = Object.entries(integrityData.files).filter(([, h]) => Boolean(h));
-    const totalFiles = entries.length || 1;
-    const mismatches = [];
-    for (let idx = 0; idx < entries.length; idx++) {
-      const [fileName, expectedHash] = entries[idx];
-      const pct = 86 + Math.round(((idx + 1) / totalFiles) * 12);
-      emit(pct, 'Verifying SHA-256...', `Checking ${fileName} (${idx + 1}/${totalFiles})`);
+  let jsUpdateAvailable = false;
+  if (integrityData?.files) {
+    const jsFiles = ['content.js', 'isolated.js', 'background.js'];
+    for (let i = 0; i < jsFiles.length; i++) {
+      const f = jsFiles[i];
+      const expected = integrityData.files[f];
+      if (!expected) continue;
+      emit(88 + Math.round(((i + 1) / jsFiles.length) * 10), 'Verifying SHA-256...', `Checking ${f} (${i + 1}/${jsFiles.length})`);
       try {
-        const localRes = await fetch(chrome.runtime.getURL(fileName), { cache: 'no-store' });
-        if (!localRes.ok) {
-          mismatches.push({ file: fileName, expected: String(expectedHash).toLowerCase(), actual: 'missing' });
-          continue;
+        const localRes = await fetch(chrome.runtime.getURL(f), { cache: 'no-store' });
+        if (!localRes.ok) continue;
+        const actual = await sha256HexBuffer(await localRes.arrayBuffer());
+        if (actual.toLowerCase() !== String(expected).toLowerCase()) {
+          if (compareVersions(latestVersion, bundledCoreVersion) === 0) {
+            return {
+              status: 'sha_mismatch',
+              mismatchSource: 'local',
+              loaderVersion,
+              currentVersion,
+              latestVersion,
+              expectedSha: String(expected).toLowerCase(),
+              actualSha: actual.toLowerCase(),
+              mismatchedFiles: [f],
+              releaseUrl
+            };
+          }
+          jsUpdateAvailable = true;
         }
-        const ab = await localRes.arrayBuffer();
-        const actualHash = await sha256HexBuffer(ab);
-        if (actualHash.toLowerCase() !== String(expectedHash).toLowerCase()) {
-          mismatches.push({ file: fileName, expected: String(expectedHash).toLowerCase(), actual: actualHash.toLowerCase() });
-        }
-      } catch (_) {
-        mismatches.push({ file: fileName, expected: String(expectedHash).toLowerCase(), actual: 'unreadable' });
-      }
-    }
-
-    if (mismatches.length > 0) {
-      return {
-        status: 'sha_mismatch',
-        mismatchSource: 'local',
-        currentVersion,
-        latestVersion,
-        expectedSha: mismatches[0].expected,
-        actualSha: mismatches[0].actual,
-        mismatchedFiles: mismatches.map((m) => m.file),
-        zipName: zipAsset?.name || '',
-        downloadUrl: zipAsset?.browser_download_url || '',
-        releaseUrl
-      };
+      } catch (_) {}
     }
   }
 
   emit(100, 'Verification complete', '100%');
-
+  const activeVersion = (needsLiveSync && latestVersion) ? latestVersion : currentVersion;
   const cachePayload = {
     checkedAt: Date.now(),
     loaderVersion,
-    currentVersion,
+    currentVersion: activeVersion,
     latestVersion,
     releaseUrl,
-    zipName: zipAsset?.name || '',
-    downloadUrl: zipAsset?.browser_download_url || '',
-    packageSha256: actualPkgSha || expectedPkgSha || ''
+    coreSha256: activeCssSha,
+    jsUpdateAvailable
   };
   try {
     await chrome.storage?.local?.set({ [LOCAL_UPDATE_CACHE_KEY]: cachePayload });
   } catch (_) {}
 
   return {
-    status: hasUpdate ? 'update_available' : 'ok',
+    status: hasUpdate ? 'updated' : 'ok',
     ...cachePayload
   };
 };
@@ -506,7 +584,12 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
   getVersions().then(({ coreVersion }) => {
     chrome.storage?.session?.get(SESSION_VERIFIED_KEY, (data) => {
       const sess = data?.[SESSION_VERIFIED_KEY];
-      if (sess && sess.verified && sess.version === coreVersion) return;
+      if (sess && sess.verified && sess.version === coreVersion) {
+        if (changeInfo.status === 'loading' || changeInfo.url) {
+          injectLiveCoreCss(tabId);
+        }
+        return;
+      }
       const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
       chrome.tabs.update(tabId, { url: gateUrl });
     });
@@ -556,25 +639,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         currentVersion: chrome.runtime.getManifest().version,
         error: err?.message || 'Unexpected verification error.'
       }));
-    return true;
-  }
-
-  if (message.type === 'DOWNLOAD_VERIFIED_ZIP') {
-    if (!message.url || !chrome.downloads?.download) {
-      sendResponse({ ok: false, error: 'Download API unavailable.' });
-      return false;
-    }
-    chrome.downloads.download({
-      url: message.url,
-      filename: message.filename || undefined,
-      saveAs: false
-    }, (downloadId) => {
-      if (chrome.runtime.lastError) {
-        sendResponse({ ok: false, error: chrome.runtime.lastError.message });
-      } else {
-        sendResponse({ ok: true, downloadId });
-      }
-    });
     return true;
   }
 

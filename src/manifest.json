@@ -17,7 +17,7 @@
     "declarativeNetRequest",
     "storage",
     "tabs",
-    "downloads"
+    "scripting"
   ],
   "host_permissions": [
     "*://*.tiktok.com/*",
@@ -69,7 +69,7 @@
         "*://*.tiktok.com/tiktokstudio",
         "*://*.tiktok.com/upload*"
       ],
-      "css": ["content.css"],
+      "css": ["boot-dark.css"],
       "run_at": "document_start"
     }
   ]

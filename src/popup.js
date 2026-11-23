@@ -103,34 +103,45 @@
       return;
     }
 
-    if (res.status === 'update_available') {
-      statusTitle.textContent = `Update available: v${res.latestVersion}`;
-      statusDesc.textContent = `Version v${res.latestVersion} is ready (SHA-256 verified). Click Download Update to save the ZIP package.`;
-      if (res.packageSha256) {
-        shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.packageSha256}`;
+    if (res.status === 'updated') {
+      if (versionPill && res.latestVersion) versionPill.textContent = `Core v${res.latestVersion}`;
+      statusTitle.textContent = `Core updated to v${res.latestVersion}`;
+      statusDesc.textContent = 'Live CSS & config updated in extension storage (SHA-256 verified).';
+      if (res.coreSha256) {
+        shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.coreSha256}`;
         shaBox.classList.remove('hidden');
       }
-      addButton('Open TikTok Studio', 'm3-btn-secondary', () => {
-        chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: false }, openStudio);
-      });
-      addButton('Download Update', 'm3-btn-primary', () => {
-        if (!res.downloadUrl) return;
-        chrome.runtime.sendMessage({ type: 'DOWNLOAD_VERIFIED_ZIP', url: res.downloadUrl, filename: res.zipName }, (dlRes) => {
-          if (dlRes?.ok) {
-            statusDesc.textContent = `Downloaded ${res.zipName || 'update ZIP'}. Extract it and reload in chrome://extensions.`;
-          }
+      if (res.jsUpdateAvailable && res.releaseUrl) {
+        warningNote.textContent = 'Optional JS engine update is available on GitHub Releases.';
+        warningNote.classList.remove('hidden');
+        addButton('View Release', 'm3-btn-secondary', () => {
+          chrome.tabs.create({ url: res.releaseUrl });
         });
+      } else {
+        addButton('Check Again', 'm3-btn-secondary', runCheck);
+      }
+      addButton('Open TikTok Studio', 'm3-btn-primary', () => {
+        chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: false }, openStudio);
       });
       return;
     }
 
+    if (versionPill && res.currentVersion) versionPill.textContent = `Core v${res.currentVersion}`;
     statusTitle.textContent = 'Up to date';
-    statusDesc.textContent = `Version v${res.currentVersion} is verified and ready.`;
-    if (res.packageSha256) {
-      shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.packageSha256}`;
+    statusDesc.textContent = `Core v${res.currentVersion} is verified and ready.`;
+    if (res.coreSha256) {
+      shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.coreSha256}`;
       shaBox.classList.remove('hidden');
     }
-    addButton('Check Again', 'm3-btn-secondary', runCheck);
+    if (res.jsUpdateAvailable && res.releaseUrl) {
+      warningNote.textContent = 'Optional JS engine update is available on GitHub Releases.';
+      warningNote.classList.remove('hidden');
+      addButton('View Release', 'm3-btn-secondary', () => {
+        chrome.tabs.create({ url: res.releaseUrl });
+      });
+    } else {
+      addButton('Check Again', 'm3-btn-secondary', runCheck);
+    }
     addButton('Open TikTok Studio', 'm3-btn-primary', () => {
       chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: false }, openStudio);
     });

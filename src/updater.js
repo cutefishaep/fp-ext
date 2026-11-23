@@ -128,50 +128,17 @@
       return;
     }
 
-    if (res.status === 'update_available') {
-      statusTitle.textContent = `Update v${res.latestVersion} available`;
-      statusDesc.textContent = 'SHA-256 verified. Checking download status...';
-
-      if (res.downloadUrl) {
-        chrome.storage?.local?.get('fa_last_downloaded_version', (st) => {
-          if (st?.fa_last_downloaded_version === res.latestVersion) {
-            statusDesc.textContent =
-              `Update v${res.latestVersion} was already downloaded (SHA-256 verified). Extract it and reload in chrome://extensions.`;
-            return;
-          }
-          statusDesc.textContent = 'SHA-256 verified. Downloading update package...';
-          chrome.runtime.sendMessage({
-            type: 'DOWNLOAD_VERIFIED_ZIP',
-            url: res.downloadUrl,
-            filename: res.zipName
-          }, (dlRes) => {
-            if (dlRes?.ok) {
-              chrome.storage?.local?.set({ fa_last_downloaded_version: res.latestVersion });
-              statusDesc.textContent =
-                `Downloaded ${res.zipName || 'update ZIP'} (SHA-256 verified). Extract it and reload in chrome://extensions.`;
-            } else {
-              statusDesc.textContent = 'SHA-256 verified. Click Download Again to save the update ZIP.';
-            }
-          });
-        });
-      }
-
-      if (res.packageSha256) {
-        shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.packageSha256}`;
-        shaBox.classList.remove('hidden');
-      }
-
-      addButton('Download Again', 'm3-btn-secondary', () => {
-        if (res.downloadUrl) {
-          chrome.runtime.sendMessage({ type: 'DOWNLOAD_VERIFIED_ZIP', url: res.downloadUrl, filename: res.zipName });
-        }
-      });
-      addButton('Continue to TikTok Studio', 'm3-btn-primary', () => proceedToStudio(false));
+    if (res.status === 'updated') {
+      if (versionPill && res.latestVersion) versionPill.textContent = `Core v${res.latestVersion}`;
+      statusTitle.textContent = `Core updated to v${res.latestVersion}`;
+      statusDesc.textContent = 'SHA-256 verified. Opening TikTok Studio...';
+      setTimeout(() => proceedToStudio(false), 300);
       return;
     }
 
+    if (versionPill && res.currentVersion) versionPill.textContent = `Core v${res.currentVersion}`;
     statusTitle.textContent = 'Verified';
-    statusDesc.textContent = `Version v${res.currentVersion} matches SHA-256. Opening TikTok Studio...`;
+    statusDesc.textContent = `Core v${res.currentVersion} matches SHA-256. Opening TikTok Studio...`;
     setTimeout(() => proceedToStudio(false), 250);
   };
 

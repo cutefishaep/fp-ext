@@ -7,15 +7,23 @@
 
   let _bypassEnabled = true;
   let _bypassWatermark = DEFAULT_WATERMARK;
+  let _liveConfig = null;
 
   const isBypassUploadEnabled = () => _bypassEnabled;
   const getBypassWatermark = () => _bypassWatermark;
+  const getLiveConfig = () => _liveConfig;
 
   const syncSettingsToPage = () => {
     const root = document.documentElement;
     if (root && root.dataset) {
       root.dataset.fishBypassEnabled = _bypassEnabled ? 'true' : 'false';
       root.dataset.fishBypassWatermark = _bypassWatermark;
+      if (_liveConfig?.inReviewNotice?.mainText) {
+        root.dataset.fishReviewMain = String(_liveConfig.inReviewNotice.mainText);
+      }
+      if (_liveConfig?.inReviewNotice?.subText) {
+        root.dataset.fishReviewSub = String(_liveConfig.inReviewNotice.subText);
+      }
     }
     try {
       window.postMessage({
@@ -48,7 +56,8 @@
   const initSettings = async () => {
     try {
       if (isExtensionAlive() && chrome.storage?.local) {
-        const stored = await chrome.storage.local.get([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark]);
+        const stored = await chrome.storage.local.get([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark, 'fa_live_core']);
+        _liveConfig = stored.fa_live_core?.config || null;
         let needsPersist = false;
         const toPersist = {};
 

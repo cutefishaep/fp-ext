@@ -14,6 +14,12 @@
   };
 
   const getMethodStatus = () => {
+    if (typeof getLiveConfig === 'function') {
+      const liveStatus = getLiveConfig()?.bypassStatus;
+      if (typeof liveStatus === 'string' && liveStatus.trim()) {
+        return liveStatus.trim().toUpperCase();
+      }
+    }
     const hasEngine = typeof window.patchSlSr === 'function' ||
       typeof window.ADJNMp4Patcher?.quickPatch === 'function';
     if (!hasEngine) return 'UNAVAILABLE';

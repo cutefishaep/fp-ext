@@ -715,11 +715,20 @@
 
       card.classList.add('fish-in-review');
       if (cover && !cover.querySelector('.fish-review-overlay')) {
+        const mainText = document.documentElement?.dataset?.fishReviewMain ||
+          "Video is on review or if it's been like this for 3 minutes, it got patched";
+        const subText = document.documentElement?.dataset?.fishReviewSub ||
+          'Just delete this video';
         const overlay = document.createElement('div');
         overlay.className = 'fish-review-overlay';
-        overlay.innerHTML =
-          '<div class="fish-review-main">Video is on review or if it\'s been like this for 3 minutes, it got patched</div>' +
-          '<div class="fish-review-sub">Just delete this video</div>';
+        const mainEl = document.createElement('div');
+        mainEl.className = 'fish-review-main';
+        mainEl.textContent = mainText;
+        const subEl = document.createElement('div');
+        subEl.className = 'fish-review-sub';
+        subEl.textContent = subText;
+        overlay.appendChild(mainEl);
+        overlay.appendChild(subEl);
         cover.appendChild(overlay);
       }
       card.dataset.fishReviewState = 'review';

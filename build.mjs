@@ -281,6 +281,8 @@ function packZipAndCrx() {
   const runtimeFiles = [
     'manifest.json',
     'core-version.json',
+    'core-config.json',
+    'boot-dark.css',
     'content.js',
     'isolated.js',
     'background.js',
@@ -324,6 +326,11 @@ function packZipAndCrx() {
   for (const f of files) {
     fileHashes[f.name] = sha256Hex(f.data);
   }
+  const cssBuf = Buffer.from(readTextLf(join(root, 'src/content.css')), 'utf8');
+  const cfgBuf = Buffer.from(readTextLf(join(root, 'src/core-config.json')), 'utf8');
+  writeFileSync(join(outDir, 'content.css'), cssBuf);
+  writeFileSync(join(outDir, 'core-config.json'), cfgBuf);
+
   const integrity = {
     version: coreVersion,
     loaderVersion,
@@ -331,6 +338,10 @@ function packZipAndCrx() {
     packages: {
       zip: { name: zipName, sha256: sha256Hex(zipBuffer) },
       crx: { name: crxName, sha256: sha256Hex(crxBuffer) }
+    },
+    liveAssets: {
+      css: { name: 'content.css', sha256: sha256Hex(cssBuf) },
+      config: { name: 'core-config.json', sha256: sha256Hex(cfgBuf) }
     },
     files: fileHashes
   };
