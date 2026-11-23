@@ -265,14 +265,14 @@ function packZipAndCrx() {
   const coreVersion = coreMeta.coreVersion || loaderVersion;
   const slug = String(manifest.name || 'extension')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const zipName = `${slug}-v${coreVersion}.zip`;
-  const crxName = `${slug}-v${coreVersion}.crx`;
+  const zipName = 'loader.zip';
+  const crxName = 'loader.crx';
 
   const outDir = join(root, 'build');
   mkdirSync(outDir, { recursive: true });
 
   for (const f of readdirSync(outDir)) {
-    if (new RegExp(`^${slug}-v[\\d.]+\\.(zip|crx)$`).test(f) && f !== zipName && f !== crxName) {
+    if (new RegExp(`^(${slug}-v[\\d.]+|loader)\\.(zip|crx)$`).test(f) && f !== zipName && f !== crxName) {
       unlinkSync(join(outDir, f));
       console.log(`- removed old ${f}`);
     }
@@ -309,6 +309,22 @@ function packZipAndCrx() {
     files.push({ name: iconPath, data: readFileSync(join(root, 'src', iconPath)) });
   }
 
+  const sha256Hex = (buf) => createHash('sha256').update(buf).digest('hex');
+  const fileHashes = {};
+  for (const f of files) {
+    fileHashes[f.name] = sha256Hex(f.data);
+  }
+  const integrity = {
+    version: coreVersion,
+    loaderVersion,
+    generatedAt: new Date().toISOString(),
+    files: fileHashes
+  };
+  files.push({
+    name: 'integrity.json',
+    data: Buffer.from(JSON.stringify(integrity, null, 2) + '\n', 'utf8')
+  });
+
   const zipBuffer = createZip(files);
   const zipPath = join(outDir, zipName);
   writeFileSync(zipPath, zipBuffer);
@@ -320,33 +336,6 @@ function packZipAndCrx() {
   writeFileSync(crxPath, crxBuffer);
   const crxKb = (crxBuffer.length / 1024).toFixed(1);
   console.log(`✓ build/${crxName.padEnd(30)} CRX3      (${crxKb} KB, key: ${source})`);
-
-  const sha256Hex = (buf) => createHash('sha256').update(buf).digest('hex');
-  const fileHashes = {};
-  for (const f of files) {
-    fileHashes[f.name] = sha256Hex(f.data);
-  }
-  const cssBuf = Buffer.from(readTextLf(join(root, 'src/content.css')), 'utf8');
-  const cfgBuf = Buffer.from(readTextLf(join(root, 'src/core-config.json')), 'utf8');
-  writeFileSync(join(outDir, 'content.css'), cssBuf);
-  writeFileSync(join(outDir, 'core-config.json'), cfgBuf);
-
-  const integrity = {
-    version: coreVersion,
-    loaderVersion,
-    generatedAt: new Date().toISOString(),
-    packages: {
-      zip: { name: zipName, sha256: sha256Hex(zipBuffer) },
-      crx: { name: crxName, sha256: sha256Hex(crxBuffer) }
-    },
-    liveAssets: {
-      css: { name: 'content.css', sha256: sha256Hex(cssBuf) },
-      config: { name: 'core-config.json', sha256: sha256Hex(cfgBuf) }
-    },
-    files: fileHashes
-  };
-  writeFileSync(join(outDir, 'integrity.json'), JSON.stringify(integrity, null, 2) + '\n', 'utf8');
-  console.log(`✓ build/integrity.json                 SHA-256   (${Object.keys(fileHashes).length} files + 2 packages)`);
 }
 
 console.log('Building Fish Acceleration...');

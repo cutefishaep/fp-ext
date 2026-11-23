@@ -60,14 +60,10 @@ jobs:
       - name: Verify build artifacts
         shell: bash
         run: |
-          ZIP="build/fish-acceleration-v${{ steps.meta.outputs.version }}.zip"
-          CRX="build/fish-acceleration-v${{ steps.meta.outputs.version }}.crx"
-          INTEGRITY="build/integrity.json"
+          ZIP="build/loader.zip"
+          CRX="build/loader.crx"
           test -s "$ZIP"
           test -s "$CRX"
-          test -s "$INTEGRITY"
-          test -s build/content.css
-          test -s build/core-config.json
           node -e "
             const fs = require('fs');
             const crx = fs.readFileSync('${CRX}');
@@ -95,14 +91,14 @@ jobs:
               echo ""
             fi
             echo "### Instalasi"
-            echo "**Opsi 1 — Load Unpacked (\`.zip\`):**"
-            echo "1. Download \`fish-acceleration-v${VER}.zip\`"
+            echo "**Opsi 1 — Load Unpacked (\`loader.zip\`):**"
+            echo "1. Download \`loader.zip\`"
             echo "2. Extract ke folder baru"
             echo "3. Buka \`chrome://extensions\` → aktifkan **Developer mode** → klik **Load unpacked** → pilih folder hasil extract"
             echo ""
-            echo "**Opsi 2 — Paket CRX (\`.crx\`):**"
-            echo "1. Download \`fish-acceleration-v${VER}.crx\`"
-            echo "2. Buka \`chrome://extensions\` → aktifkan **Developer mode** → drag & drop file \`.crx\`"
+            echo "**Opsi 2 — Paket CRX (\`loader.crx\`):**"
+            echo "1. Download \`loader.crx\`"
+            echo "2. Buka \`chrome://extensions\` → aktifkan **Developer mode** → drag & drop file \`loader.crx\`"
             if [ -n "$PREV" ]; then
               echo ""
               echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
@@ -117,17 +113,14 @@ jobs:
         run: |
           TAG="${{ steps.meta.outputs.tag }}"
           VER="${{ steps.meta.outputs.version }}"
-          ZIP="build/fish-acceleration-v${VER}.zip"
-          CRX="build/fish-acceleration-v${VER}.crx"
-          INTEGRITY="build/integrity.json"
-          LIVE_CSS="build/content.css"
-          LIVE_CFG="build/core-config.json"
+          ZIP="build/loader.zip"
+          CRX="build/loader.crx"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP" "$CRX" "$INTEGRITY" "$LIVE_CSS" "$LIVE_CFG" --clobber
+            gh release upload "$TAG" "$ZIP" "$CRX" --clobber
             gh release edit "$TAG" --title "Fish Acceleration v${VER}" --notes-file release-notes.md
           else
-            gh release create "$TAG" "$ZIP" "$CRX" "$INTEGRITY" "$LIVE_CSS" "$LIVE_CFG" \
+            gh release create "$TAG" "$ZIP" "$CRX" \
               --title "Fish Acceleration v${VER}" \
               --notes-file release-notes.md \
               --latest

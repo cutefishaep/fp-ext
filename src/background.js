@@ -119,6 +119,56 @@ const streamFetchWithProgress = async (url, expectedSize, startPct, endPct, titl
   return merged.buffer;
 };
 
+const extractZipEntries = async (arrayBuffer, wantedNames) => {
+  const wanted = new Set(wantedNames);
+  const bytes = new Uint8Array(arrayBuffer);
+  const view = new DataView(arrayBuffer);
+
+  let eocdOffset = -1;
+  const minOff = Math.max(0, bytes.length - 65558);
+  for (let i = bytes.length - 22; i >= minOff; i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocdOffset = i;
+      break;
+    }
+  }
+  if (eocdOffset < 0) throw new Error('Invalid ZIP archive (EOCD not found).');
+
+  const totalEntries = view.getUint16(eocdOffset + 10, true);
+  let cdOffset = view.getUint32(eocdOffset + 16, true);
+  const decoder = new TextDecoder('utf-8');
+  const out = {};
+
+  for (let i = 0; i < totalEntries && cdOffset + 46 <= bytes.length; i++) {
+    if (view.getUint32(cdOffset, true) !== 0x02014b50) break;
+    const method = view.getUint16(cdOffset + 10, true);
+    const compSize = view.getUint32(cdOffset + 20, true);
+    const nameLen = view.getUint16(cdOffset + 28, true);
+    const extraLen = view.getUint16(cdOffset + 30, true);
+    const commentLen = view.getUint16(cdOffset + 32, true);
+    const localOffset = view.getUint32(cdOffset + 42, true);
+    const name = decoder.decode(bytes.subarray(cdOffset + 46, cdOffset + 46 + nameLen));
+    cdOffset += 46 + nameLen + extraLen + commentLen;
+
+    if (!wanted.has(name)) continue;
+    if (localOffset + 30 > bytes.length || view.getUint32(localOffset, true) !== 0x04034b50) continue;
+
+    const localNameLen = view.getUint16(localOffset + 26, true);
+    const localExtraLen = view.getUint16(localOffset + 28, true);
+    const dataStart = localOffset + 30 + localNameLen + localExtraLen;
+    const compressed = bytes.subarray(dataStart, dataStart + compSize);
+
+    if (method === 0) {
+      out[name] = compressed;
+    } else if (method === 8) {
+      const ds = new DecompressionStream('deflate-raw');
+      const decompressed = await new Response(new Blob([compressed]).stream().pipeThrough(ds)).arrayBuffer();
+      out[name] = new Uint8Array(decompressed);
+    }
+  }
+  return out;
+};
+
 const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   const emit = (percent, title, detail = '') => {
     try { onProgress({ percent, title, detail }); } catch (_) {}
@@ -144,18 +194,8 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   const latestVersion = String(release?.tag_name || '').replace(/^v/i, '');
   const releaseUrl = release?.html_url || 'https://github.com/cutefishaep/fp-ext/releases';
   const assets = Array.isArray(release?.assets) ? release.assets : [];
-  const integrityAsset = assets.find((a) => a?.name === 'integrity.json');
-  const cssAsset = assets.find((a) => a?.name === 'content.css');
-  const configAsset = assets.find((a) => a?.name === 'core-config.json');
-
-  let integrityData = null;
-  if (integrityAsset?.browser_download_url) {
-    emit(16, 'Fetching integrity manifest...', 'Downloading integrity.json...');
-    try {
-      const intRes = await fetch(integrityAsset.browser_download_url, { cache: 'no-store' });
-      if (intRes.ok) integrityData = await intRes.json();
-    } catch (_) {}
-  }
+  const zipAsset = assets.find((a) => a?.name === 'loader.zip') || assets.find((a) => /\.zip$/i.test(a?.name || ''));
+  const expectedZipSha = String(zipAsset?.digest || '').replace(/^sha256:/i, '').trim();
 
   let liveCore = null;
   try {
@@ -164,53 +204,76 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   } catch (_) {}
 
   const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
-  const needsLiveSync = Boolean(cssAsset?.browser_download_url && (hasUpdate || !liveCore?.css));
-  let activeCssSha = liveCore?.cssSha256 || '';
+  const needsDownload = Boolean(
+    zipAsset?.browser_download_url &&
+    (hasUpdate || !liveCore?.css || (expectedZipSha && liveCore?.zipSha256 && liveCore.zipSha256 !== expectedZipSha.toLowerCase()))
+  );
 
-  if (needsLiveSync) {
+  let activeZipSha = liveCore?.zipSha256 || expectedZipSha || '';
+  let integrityFiles = liveCore?.integrityFiles || null;
+
+  if (needsDownload) {
     try {
-      const cssBuf = await streamFetchWithProgress(
-        cssAsset.browser_download_url,
-        cssAsset.size,
-        22,
-        72,
-        'Downloading Core CSS...',
+      const zipBuf = await streamFetchWithProgress(
+        zipAsset.browser_download_url,
+        zipAsset.size,
+        18,
+        74,
+        'Downloading loader.zip...',
         emit
       );
-      emit(76, 'Verifying Core CSS SHA-256...', 'Computing SHA-256...');
-      const actualCssSha = await sha256HexBuffer(cssBuf);
-      const expectedCssSha = String(cssAsset.digest || '').replace(/^sha256:/i, '').trim() ||
-        String(integrityData?.liveAssets?.css?.sha256 || integrityData?.files?.['content.css'] || '').trim();
+      emit(78, 'Verifying package SHA-256...', zipAsset.name || 'Computing SHA-256...');
+      const actualZipSha = await sha256HexBuffer(zipBuf);
 
-      if (expectedCssSha && actualCssSha.toLowerCase() !== expectedCssSha.toLowerCase()) {
+      if (expectedZipSha && actualZipSha.toLowerCase() !== expectedZipSha.toLowerCase()) {
         return {
           status: 'sha_mismatch',
-          mismatchSource: 'core',
+          mismatchSource: 'package',
           loaderVersion,
           currentVersion,
           latestVersion,
-          expectedSha: expectedCssSha.toLowerCase(),
-          actualSha: actualCssSha.toLowerCase(),
-          mismatchedFiles: ['content.css'],
+          expectedSha: expectedZipSha.toLowerCase(),
+          actualSha: actualZipSha.toLowerCase(),
+          mismatchedFiles: [zipAsset.name],
           releaseUrl
         };
       }
 
+      emit(82, 'Extracting Core...', 'Reading content.css & core-config.json...');
+      const entries = await extractZipEntries(zipBuf, ['content.css', 'core-config.json', 'integrity.json']);
+      const cssBytes = entries['content.css'];
+      const cfgBytes = entries['core-config.json'];
+      const intBytes = entries['integrity.json'];
+
+      const integrityData = intBytes ? JSON.parse(new TextDecoder().decode(intBytes)) : null;
+      integrityFiles = integrityData?.files || null;
+
+      let cssText = '';
+      let actualCssSha = '';
+      if (cssBytes) {
+        actualCssSha = await sha256HexBuffer(cssBytes.buffer.slice(cssBytes.byteOffset, cssBytes.byteOffset + cssBytes.byteLength));
+        const expectedCssSha = String(integrityFiles?.['content.css'] || '').trim();
+        if (expectedCssSha && actualCssSha.toLowerCase() !== expectedCssSha.toLowerCase()) {
+          return {
+            status: 'sha_mismatch',
+            mismatchSource: 'core',
+            loaderVersion,
+            currentVersion,
+            latestVersion,
+            expectedSha: expectedCssSha.toLowerCase(),
+            actualSha: actualCssSha.toLowerCase(),
+            mismatchedFiles: ['content.css'],
+            releaseUrl
+          };
+        }
+        cssText = new TextDecoder().decode(cssBytes);
+      }
+
       let configObj = null;
       let actualCfgSha = '';
-      if (configAsset?.browser_download_url) {
-        const cfgBuf = await streamFetchWithProgress(
-          configAsset.browser_download_url,
-          configAsset.size,
-          80,
-          86,
-          'Downloading Core config...',
-          emit
-        );
-        actualCfgSha = await sha256HexBuffer(cfgBuf);
-        const expectedCfgSha = String(configAsset.digest || '').replace(/^sha256:/i, '').trim() ||
-          String(integrityData?.liveAssets?.config?.sha256 || integrityData?.files?.['core-config.json'] || '').trim();
-
+      if (cfgBytes) {
+        actualCfgSha = await sha256HexBuffer(cfgBytes.buffer.slice(cfgBytes.byteOffset, cfgBytes.byteOffset + cfgBytes.byteLength));
+        const expectedCfgSha = String(integrityFiles?.['core-config.json'] || '').trim();
         if (expectedCfgSha && actualCfgSha.toLowerCase() !== expectedCfgSha.toLowerCase()) {
           return {
             status: 'sha_mismatch',
@@ -224,11 +287,10 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
             releaseUrl
           };
         }
-        configObj = JSON.parse(new TextDecoder().decode(cfgBuf));
+        configObj = JSON.parse(new TextDecoder().decode(cfgBytes));
       }
 
-      const cssText = new TextDecoder().decode(cssBuf);
-      activeCssSha = actualCssSha;
+      activeZipSha = actualZipSha;
       await chrome.storage?.local?.set({
         [LIVE_CORE_STORAGE_KEY]: {
           coreVersion: latestVersion || currentVersion,
@@ -236,6 +298,8 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
           cssSha256: actualCssSha,
           config: configObj,
           configSha256: actualCfgSha,
+          zipSha256: actualZipSha,
+          integrityFiles,
           updatedAt: Date.now()
         }
       });
@@ -245,22 +309,20 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
         loaderVersion,
         currentVersion,
         latestVersion,
-        error: err?.message || 'Failed to download Core update.'
+        error: err?.message || 'Failed to download & verify loader.zip.'
       };
     }
   } else if (liveCore?.css) {
     emit(60, 'Verifying cached Core...', 'Checking live Core SHA-256...');
     const cachedCssSha = await sha256HexBuffer(new TextEncoder().encode(liveCore.css).buffer);
-    const expectedCssSha = String(integrityData?.liveAssets?.css?.sha256 || integrityData?.files?.['content.css'] || '').trim();
-    if (expectedCssSha && compareVersions(latestVersion, liveCore.coreVersion) === 0 &&
-        cachedCssSha.toLowerCase() !== expectedCssSha.toLowerCase()) {
+    if (liveCore.cssSha256 && cachedCssSha.toLowerCase() !== liveCore.cssSha256.toLowerCase()) {
       return {
         status: 'sha_mismatch',
         mismatchSource: 'core',
         loaderVersion,
         currentVersion,
         latestVersion,
-        expectedSha: expectedCssSha.toLowerCase(),
+        expectedSha: liveCore.cssSha256.toLowerCase(),
         actualSha: cachedCssSha.toLowerCase(),
         mismatchedFiles: ['content.css (cached)'],
         releaseUrl
@@ -269,11 +331,11 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   }
 
   let jsUpdateAvailable = false;
-  if (integrityData?.files) {
+  if (integrityFiles) {
     const jsFiles = ['content.js', 'isolated.js', 'background.js'];
     for (let i = 0; i < jsFiles.length; i++) {
       const f = jsFiles[i];
-      const expected = integrityData.files[f];
+      const expected = integrityFiles[f];
       if (!expected) continue;
       emit(88 + Math.round(((i + 1) / jsFiles.length) * 10), 'Verifying SHA-256...', `Checking ${f} (${i + 1}/${jsFiles.length})`);
       try {
@@ -301,14 +363,14 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   }
 
   emit(100, 'Verification complete', '100%');
-  const activeVersion = (needsLiveSync && latestVersion) ? latestVersion : currentVersion;
+  const activeVersion = (needsDownload && latestVersion) ? latestVersion : currentVersion;
   const cachePayload = {
     checkedAt: Date.now(),
     loaderVersion,
     currentVersion: activeVersion,
     latestVersion,
     releaseUrl,
-    coreSha256: activeCssSha,
+    coreSha256: activeZipSha,
     jsUpdateAvailable
   };
   try {
