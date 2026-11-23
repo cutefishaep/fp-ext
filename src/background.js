@@ -136,8 +136,105 @@ const syncUserScriptCore = async (explicitCode = null) => {
   }
 };
 
-chrome.runtime?.onInstalled?.addListener(() => { syncUserScriptCore(); });
-chrome.runtime?.onStartup?.addListener(() => { syncUserScriptCore(); });
+const WEB_METHODS_BASE = 'https://www.cutefish.my.id/assets/vendor/tiktok-method/';
+const WEB_METHOD_SCRIPT_ID = 'fp-ext-web-method';
+const WEB_METHODS_JSON_URL = WEB_METHODS_BASE + 'methods.json';
+
+const fetchWebMethodsConfig = async () => {
+  const storageKey = 'fp_ext_web_methods_json';
+  try {
+    const res = await fetch(WEB_METHODS_JSON_URL, { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.methods)) {
+        await chrome.storage?.local?.set({ [storageKey]: data });
+        return { ok: true, data };
+      }
+    }
+  } catch (_) {}
+
+  try {
+    const stored = await chrome.storage?.local?.get(storageKey);
+    if (stored?.[storageKey]) {
+      return { ok: true, data: stored[storageKey] };
+    }
+  } catch (_) {}
+
+  return {
+    ok: false,
+    data: {
+      status: 'WORKING',
+      defaultMethod: 'fish',
+      methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', file: 'fish.js' }]
+    }
+  };
+};
+
+const syncWebMethodUserScript = async (methodId = 'fish', tabId = null) => {
+  const cleanId = String(methodId || 'fish').replace(/[^a-z0-9_-]/gi, '') || 'fish';
+  const storageKey = `fp_ext_web_method_${cleanId}`;
+  let code = '';
+  try {
+    const res = await fetch(`${WEB_METHODS_BASE}${cleanId}.js`, { cache: 'no-store' });
+    if (res.ok) {
+      code = await res.text();
+      if (code) {
+        await chrome.storage?.local?.set({ [storageKey]: code });
+      }
+    }
+  } catch (_) {}
+
+  if (!code) {
+    try {
+      const stored = await chrome.storage?.local?.get(storageKey);
+      code = stored?.[storageKey] || '';
+    } catch (_) {}
+  }
+  if (!code) return { ok: false, methodId: cleanId, error: 'Failed to fetch method script from cutefish.my.id.' };
+
+  if (await isUserScriptsAvailable()) {
+    try {
+      const existing = await chrome.userScripts.getScripts({ ids: [WEB_METHOD_SCRIPT_ID] });
+      if (existing && existing.length > 0) {
+        await chrome.userScripts.update([{
+          id: WEB_METHOD_SCRIPT_ID,
+          matches: STUDIO_MATCHES,
+          js: [{ code }],
+          world: 'MAIN',
+          runAt: 'document_start'
+        }]);
+      } else {
+        await chrome.userScripts.register([{
+          id: WEB_METHOD_SCRIPT_ID,
+          matches: STUDIO_MATCHES,
+          js: [{ code }],
+          world: 'MAIN',
+          runAt: 'document_start'
+        }]);
+      }
+      if (tabId && typeof chrome.userScripts.execute === 'function') {
+        try {
+          await chrome.userScripts.execute({
+            target: { tabId },
+            world: 'MAIN',
+            js: [{ code }]
+          });
+        } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  return { ok: true, methodId: cleanId };
+};
+
+chrome.runtime?.onInstalled?.addListener(() => {
+  syncUserScriptCore();
+  syncWebMethodUserScript('fish');
+});
+chrome.runtime?.onStartup?.addListener(() => {
+  syncUserScriptCore();
+  syncWebMethodUserScript('fish');
+});
 
 const streamFetchWithProgress = async (url, expectedSize, startPct, endPct, title, emit) => {
   const res = await fetch(url, { cache: 'no-store' });
@@ -905,8 +1002,22 @@ const ensureOffscreenDocument = async () => {
   return true;
 };
 
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (!message || !message.type) return false;
+
+  if (message.type === 'GET_WEB_METHODS') {
+    fetchWebMethodsConfig()
+      .then((result) => sendResponse(result))
+      .catch(() => sendResponse({ ok: false, data: null }));
+    return true;
+  }
+
+  if (message.type === 'SYNC_WEB_METHOD') {
+    syncWebMethodUserScript(message.methodId || 'fish', sender?.tab?.id || null)
+      .then((result) => sendResponse(result))
+      .catch((err) => sendResponse({ ok: false, error: err?.message || 'Sync web method failed.' }));
+    return true;
+  }
 
   if (message.type === 'PROBE_VIDEO') {
     handleProbeVideo(message)

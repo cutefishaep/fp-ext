@@ -13,30 +13,32 @@
     });
   };
 
-  const getMethodStatus = () => {
-    if (typeof getLiveConfig === 'function') {
-      const liveStatus = getLiveConfig()?.bypassStatus;
-      if (typeof liveStatus === 'string' && liveStatus.trim()) {
-        return liveStatus.trim().toUpperCase();
-      }
-    }
-    const hasEngine = typeof window.patchSlSr === 'function' ||
-      typeof window.ADJNMp4Patcher?.quickPatch === 'function';
-    if (!hasEngine) return 'UNAVAILABLE';
+  const METHOD_STORAGE_KEY = 'fish_acc_selected_method';
+  const _webMethodsState = {
+    status: 'WORKING',
+    defaultMethod: 'fish',
+    methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', file: 'fish.js' }],
+    loaded: false
+  };
 
-    const engineApis = [
-      window.ADJNMp4Patcher,
-      window.FRYMp4Patcher,
-      window.FRYOriginalMp4Core,
-      window.ADJNOriginalMp4Core,
-      window.HazePatch
-    ];
-    for (const api of engineApis) {
-      if (api && typeof api.status === 'string' && api.status.trim()) {
-        return api.status.trim().toUpperCase();
-      }
-    }
-    return 'WORKING';
+  const getSelectedMethodId = () => {
+    try {
+      const saved = window.localStorage.getItem(METHOD_STORAGE_KEY);
+      if (saved && _webMethodsState.methods.some((m) => m.id === saved)) return saved;
+    } catch (_) {}
+    return _webMethodsState.defaultMethod || 'fish';
+  };
+
+  const setSelectedMethodId = (methodId) => {
+    const clean = String(methodId || 'fish').trim() || 'fish';
+    try { window.localStorage.setItem(METHOD_STORAGE_KEY, clean); } catch (_) {}
+  };
+
+  const getMethodStatus = () => {
+    const selectedId = getSelectedMethodId();
+    const found = _webMethodsState.methods.find((m) => m.id === selectedId);
+    const raw = (found && found.status) || _webMethodsState.status || 'WORKING';
+    return String(raw).trim().toUpperCase();
   };
 
   const updateMethodStatusBadge = () => {
@@ -56,12 +58,21 @@
     const compressToggle = document.getElementById('m3-compress-toggle');
     const wmRow = document.getElementById('m3-watermark-row');
     const wmInput = document.getElementById('m3-watermark-input');
+    const methodRow = document.getElementById('m3-method-row');
+    const methodSelect = document.getElementById('m3-method-select');
     const enabled = isBypassUploadEnabled();
     if (toggle && toggle.checked !== enabled) {
       toggle.checked = enabled;
     }
     if (compressToggle && compressToggle.checked !== isCompressVideoEnabled()) {
       compressToggle.checked = isCompressVideoEnabled();
+    }
+    if (methodRow) {
+      methodRow.style.display = enabled ? '' : 'none';
+    }
+    if (methodSelect) {
+      const cur = getSelectedMethodId();
+      if (methodSelect.value !== cur) methodSelect.value = cur;
     }
     if (wmRow) {
       wmRow.style.display = enabled ? '' : 'none';
@@ -71,42 +82,49 @@
     }
   };
 
-  // Unified 1:1 Video Calibrator Pipeline (berjalan penuh di context extension ISOLATED world)
-  const calibrateVideoFile = async (file) => {
-    // 1. Engine 4.0 Direct Patch (sl-sr.js bundled in extension)
-    try {
-      if (typeof window.patchSlSr === 'function') {
-        log('Patching video inside extension (sl-sr engine)...');
-        const patchedBlob = await window.patchSlSr(file);
-        if (patchedBlob && patchedBlob.size > 0) {
-          log('✓ Video patched via sl-sr (size:', patchedBlob.size, ')');
-          return new File([patchedBlob], file.name, {
-            type: 'video/mp4',
-            lastModified: Date.now()
-          });
-        }
-      }
-    } catch (errSlSr) {
-      log('sl-sr notice (falling back to patch.js):', errSlSr?.message || errSlSr);
-    }
+  const patchViaWebMethodBridge = (arrayBuffer, methodId = 'fish') => new Promise((resolve, reject) => {
+    const reqId = 'patch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    const timer = window.setTimeout(() => {
+      window.removeEventListener('message', onMsg);
+      reject(new Error('Web method patch timeout.'));
+    }, 30000);
 
-    // 2. Fallback Engine 5.0 Core (patch.js bundled in extension)
+    const onMsg = (event) => {
+      if (event.source !== window || event.origin !== window.location.origin) return;
+      const msg = event.data;
+      if (!msg || msg.source !== 'fish-acc-main' || msg.type !== 'FISH_PATCH_VIDEO_RESULT' || msg.reqId !== reqId) return;
+      window.clearTimeout(timer);
+      window.removeEventListener('message', onMsg);
+      if (msg.ok && msg.buffer) resolve(msg.buffer);
+      else reject(new Error(msg.error || 'Web method patch failed.'));
+    };
+
+    window.addEventListener('message', onMsg);
+    window.postMessage({
+      source: 'fish-acc-isolated',
+      type: 'FISH_PATCH_VIDEO',
+      reqId,
+      methodId,
+      buffer: arrayBuffer
+    }, window.location.origin, [arrayBuffer]);
+  });
+
+  // Unified Video Calibrator Pipeline (fetch method dari cutefish.my.id, eksekusi via MAIN world bridge)
+  const calibrateVideoFile = async (file, methodId = 'fish') => {
     try {
-      const patcher = window.ADJNMp4Patcher || window.FRYMp4Patcher;
-      if (patcher && typeof patcher.quickPatch === 'function') {
-        log('Patching video inside extension (patch.js Core v5.0)...');
-        const buf = await file.arrayBuffer();
-        const patchedU8 = patcher.quickPatch(buf);
-        if (patchedU8 && patchedU8.length > 0) {
-          log('✓ Video patched via patch.js (size:', patchedU8.length, ')');
-          return new File([patchedU8], file.name, {
-            type: 'video/mp4',
-            lastModified: Date.now()
-          });
-        }
+      await sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId });
+      log('Patching video using web method (' + methodId + ') from cutefish.my.id...');
+      const buf = await file.arrayBuffer();
+      const patchedAb = await patchViaWebMethodBridge(buf, methodId);
+      if (patchedAb && patchedAb.byteLength > 0) {
+        log('✓ Video patched via web method ' + methodId + ' (size:', patchedAb.byteLength, ')');
+        return new File([patchedAb], file.name, {
+          type: 'video/mp4',
+          lastModified: Date.now()
+        });
       }
-    } catch (errPatch) {
-      log('patch.js notice:', errPatch?.message || errPatch);
+    } catch (errWeb) {
+      log('web method notice:', errWeb?.message || errWeb);
     }
 
     log('Video handed over untouched as fallback');
@@ -345,6 +363,12 @@
         <p class="m3-bypass-desc">
           Video calibration runs locally inside the extension before handover to TikTok Studio's upload panel.
         </p>
+        <div class="m3-watermark-row" id="m3-method-row" style="${isEnabled ? '' : 'display: none;'}">
+          <label class="m3-watermark-label" for="m3-method-select">Method</label>
+          <select id="m3-method-select" class="m3-method-select">
+            ${_webMethodsState.methods.map((m) => `<option value="${escapeHtmlAttr(m.id)}" ${m.id === getSelectedMethodId() ? 'selected' : ''}>${escapeHtmlAttr(m.name || m.id)}</option>`).join('')}
+          </select>
+        </div>
         <div class="m3-watermark-row" id="m3-watermark-row" style="${isEnabled ? '' : 'display: none;'}">
           <label class="m3-watermark-label" for="m3-watermark-input">Watermark</label>
           <input type="text" id="m3-watermark-input" class="m3-watermark-input" value="${escapeHtmlAttr(currentWm)}" placeholder="Method from @username" />
@@ -368,13 +392,43 @@
 
     const toggle = card.querySelector('#m3-bypass-toggle');
     const compressToggle = card.querySelector('#m3-compress-toggle');
+    const methodRow = card.querySelector('#m3-method-row');
+    const methodSelect = card.querySelector('#m3-method-select');
     const wmRow = card.querySelector('#m3-watermark-row');
     const wmInput = card.querySelector('#m3-watermark-input');
 
     toggle.addEventListener('change', (e) => {
       const checked = e.target.checked;
       setBypassUploadEnabled(checked);
+      if (methodRow) methodRow.style.display = checked ? '' : 'none';
       if (wmRow) wmRow.style.display = checked ? '' : 'none';
+    });
+
+    if (methodSelect) {
+      methodSelect.addEventListener('change', (e) => {
+        const nextId = e.target.value;
+        setSelectedMethodId(nextId);
+        updateMethodStatusBadge();
+        sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: nextId });
+      });
+    }
+
+    sendRuntimeMsg({ type: 'GET_WEB_METHODS' }).then((res) => {
+      const data = res && res.data;
+      if (!data || !Array.isArray(data.methods) || !data.methods.length) return;
+      _webMethodsState.status = data.status || 'WORKING';
+      _webMethodsState.defaultMethod = data.defaultMethod || data.methods[0].id || 'fish';
+      _webMethodsState.methods = data.methods;
+      _webMethodsState.loaded = true;
+      const sel = document.getElementById('m3-method-select');
+      if (sel) {
+        const cur = getSelectedMethodId();
+        sel.innerHTML = data.methods.map((m) =>
+          `<option value="${escapeHtmlAttr(m.id)}" ${m.id === cur ? 'selected' : ''}>${escapeHtmlAttr(m.name || m.id)}</option>`
+        ).join('');
+      }
+      updateMethodStatusBadge();
+      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: getSelectedMethodId() });
     });
 
     if (compressToggle) {
@@ -667,7 +721,7 @@
         log('Processing video:', workingFile.name);
         const startPct = doCompress ? 82 : 10;
         setProgress(startPct, doCompress ? 'Processing...' : '');
-        const patchPromise = calibrateVideoFile(workingFile);
+        const patchPromise = calibrateVideoFile(workingFile, getSelectedMethodId());
         await Promise.all([patchPromise, animateProgress(startPct, 95, 280)]);
         workingFile = await patchPromise;
       }

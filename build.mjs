@@ -75,23 +75,14 @@ function buildIsolatedJs() {
   if (files.length === 0) throw new Error('No .js parts found in src/isolated/');
 
   const chunks = [];
-  let enginesBundled = false;
   for (const f of files) {
     chunks.push(readTextLf(join(dir, f)));
-    if (f.startsWith('00-') && !enginesBundled) {
-      chunks.push('\n' + readTextLf(join(root, 'asset/engines/patch.js')) + '\n');
-      chunks.push(readTextLf(join(root, 'asset/engines/sl-sr.js')) + '\n');
-      enginesBundled = true;
-    }
-  }
-  if (!enginesBundled) {
-    throw new Error('Expected 00-header.js in src/isolated/ to wrap bundled engines.');
   }
 
   const out = chunks.join('');
   checkJsSyntax(out, 'core/isolated.js');
   const kb = (Buffer.byteLength(out) / 1024).toFixed(1);
-  console.log(`✓ ${'core/isolated.js'.padEnd(18)} ${String(files.length + 2).padStart(2)} parts  ${kb.padStart(8)} KB`);
+  console.log(`✓ ${'core/isolated.js'.padEnd(18)} ${String(files.length).padStart(2)} parts  ${kb.padStart(8)} KB`);
   return out;
 }
 

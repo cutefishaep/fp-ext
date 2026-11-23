@@ -452,6 +452,25 @@
   box-shadow: 0 0 10px rgba(163, 219, 167, 0.3) !important;
 }
 
+.m3-method-select {
+  flex: 1 1 auto !important;
+  background: #111512 !important;
+  border: 1px solid rgba(163, 219, 167, 0.3) !important;
+  border-radius: 10px !important;
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #f2f7f2 !important;
+  outline: none !important;
+  cursor: pointer !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+
+.m3-method-select:focus {
+  border-color: #a3dba7 !important;
+  box-shadow: 0 0 10px rgba(163, 219, 167, 0.3) !important;
+}
+
 /* Tulisan Credit di LUAR Container */
 .m3-bypass-credit {
   display: block !important;
