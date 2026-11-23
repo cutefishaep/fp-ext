@@ -7,7 +7,7 @@
  */
 'use strict';
 
-const ALLOWED_STREAM_HOST_RE = /(?:^|\.)(tiktokcdn\.com|tiktokcdn-us\.com|akamaized\.net|tiktok\.com|tikwm\.com)$/i;
+const ALLOWED_STREAM_HOST_RE = /(?:^|\.)(tiktokcdn\.com|tiktokcdn-us\.com|tiktokcdn-eu\.com|tiktokv\.com|byteoversea\.com|akamaized\.net|tiktok\.com|tikwm\.com)$/i;
 const ALLOWED_TIKWM_HOST_RE = /(?:^|\.)tikwm\.com$/i;
 const GITHUB_LATEST_RELEASE_URL = 'https://api.github.com/repos/cutefishaep/fp-ext/releases/latest';
 const TIKTOK_STUDIO_URL_RE = /^https:\/\/([^/]+\.)?tiktok\.com\/(tiktokstudio(\/|$|\?|#)|upload(\/|$|\?|#))/i;
@@ -831,18 +831,16 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
 
   if (pageUrl && typeof pageUrl === 'string' && pageUrl.startsWith('https://www.tiktok.com/')) {
     try {
-      const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}`;
+      const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}&hd=1`;
       if (isAllowedUrl(apiUrl, ALLOWED_TIKWM_HOST_RE)) {
         const twRes = await fetch(apiUrl);
         if (twRes.ok) {
           const twJson = await twRes.json();
           if (twJson && twJson.code === 0 && twJson.data) {
             tikwmData = twJson.data;
-            if (!resolvedStreamUrl) {
-              const cand = tikwmData.play || tikwmData.hdplay || (tikwmData.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null);
-              if (isAllowedUrl(cand, ALLOWED_STREAM_HOST_RE)) {
-                resolvedStreamUrl = cand;
-              }
+            const cand = tikwmData.hdplay || tikwmData.play || (tikwmData.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null);
+            if (isAllowedUrl(cand, ALLOWED_STREAM_HOST_RE)) {
+              resolvedStreamUrl = cand;
             }
           }
         }
