@@ -138,6 +138,9 @@
 
     syncSettingsToPage();
     syncCardControlsFromState();
+    if (typeof checkLoaderVersionCompatibility === 'function') {
+      checkLoaderVersionCompatibility();
+    }
   };
 
   // Bridge: MAIN world -> Background Service Worker (TikWM & CDN Range probe)

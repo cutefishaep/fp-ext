@@ -277,11 +277,21 @@ function packCoreZip({ contentJs, isolatedJs, contentCss }) {
   const outDir = join(root, 'build');
   mkdirSync(outDir, { recursive: true });
 
+  const rawCoreConfig = existsSync(join(root, 'src/core-config.json'))
+    ? JSON.parse(readTextLf(join(root, 'src/core-config.json')))
+    : {};
+  const mergedCoreConfig = {
+    ...rawCoreConfig,
+    coreVersion,
+    loaderVersion,
+    minLoaderVersion: rawCoreConfig.minLoaderVersion || loaderVersion
+  };
+
   const files = [
     { name: 'content.js', data: Buffer.from(contentJs, 'utf8') },
     { name: 'isolated.js', data: Buffer.from(isolatedJs, 'utf8') },
     { name: 'content.css', data: Buffer.from(contentCss, 'utf8') },
-    { name: 'core-config.json', data: Buffer.from(readTextLf(join(root, 'src/core-config.json')), 'utf8') },
+    { name: 'core-config.json', data: Buffer.from(JSON.stringify(mergedCoreConfig, null, 2) + '\n', 'utf8') },
     { name: 'core-version.json', data: Buffer.from(readTextLf(join(root, 'src/core-version.json')), 'utf8') }
   ];
 

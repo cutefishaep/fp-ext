@@ -69,6 +69,103 @@
 }
 
 /* ==========================================================================
+   Material 3 Loader Update Required Modal
+   ========================================================================== */
+.m3-loader-update-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  background: rgba(0, 0, 0, 0.68) !important;
+  backdrop-filter: blur(4px) !important;
+  box-sizing: border-box !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.m3-loader-update-modal {
+  width: 100% !important;
+  max-width: 420px !important;
+  background: #171c18 !important;
+  border: 1px solid rgba(163, 219, 167, 0.25) !important;
+  border-radius: 24px !important;
+  padding: 24px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65) !important;
+  box-sizing: border-box !important;
+  color: #f2f7f2 !important;
+}
+
+.m3-loader-update-title {
+  margin: 0 0 8px 0 !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  color: #f2f7f2 !important;
+}
+
+.m3-loader-update-sub {
+  margin: 0 0 14px 0 !important;
+  font-size: 12.5px !important;
+  line-height: 1.45 !important;
+  color: #a9b8ab !important;
+}
+
+.m3-loader-update-meta {
+  display: inline-block !important;
+  margin: 0 0 20px 0 !important;
+  padding: 5px 12px !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #c4f7c8 !important;
+}
+
+.m3-loader-update-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+}
+
+.m3-loader-btn-secondary,
+.m3-loader-btn-primary {
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 9999px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.m3-loader-btn-secondary {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  color: #e3ece4 !important;
+}
+
+.m3-loader-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+}
+
+.m3-loader-btn-primary {
+  background: #a3dba7 !important;
+  border: 1px solid #a3dba7 !important;
+  color: #053311 !important;
+}
+
+.m3-loader-btn-primary:hover {
+  background: #baf0be !important;
+  border-color: #baf0be !important;
+}
+
+/* ==========================================================================
    Material 3 1:1 Bypass Upload Control Card (/tiktokstudio/upload)
    ========================================================================== */
 .m3-bypass-card {
