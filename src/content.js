@@ -1497,6 +1497,34 @@
       return btn;
     };
 
+    const syncInReviewOverlay = (card, item) => {
+      const infoRow = card.querySelector('div[data-tt="components_PostInfoCell_FlexRow"]');
+      const isInReview = Boolean(
+        (item && (item.in_review === true || Number(item.status) === 144)) ||
+        (infoRow && infoRow.classList.contains('css-1j32rxn'))
+      );
+      const cover = card.querySelector('div[data-tt="VideoCover_index_VideoCoverContainer"]');
+
+      if (!isInReview) {
+        card.classList.remove('fish-in-review');
+        const oldOverlay = card.querySelector('.fish-review-overlay');
+        if (oldOverlay) oldOverlay.remove();
+        card.dataset.fishReviewState = 'normal';
+        return;
+      }
+
+      card.classList.add('fish-in-review');
+      if (cover && !cover.querySelector('.fish-review-overlay')) {
+        const overlay = document.createElement('div');
+        overlay.className = 'fish-review-overlay';
+        overlay.innerHTML =
+          '<div class="fish-review-main">Video is on review or if it\'s been like this for 3 minutes, it got patched</div>' +
+          '<div class="fish-review-sub">Just delete this video</div>';
+        cover.appendChild(overlay);
+      }
+      card.dataset.fishReviewState = 'review';
+    };
+
     const injectCheckQualityButtons = () => {
       const isPostPage = window.location.pathname.includes('/content') || window.location.pathname.includes('/post');
       if (!isPostPage) return;
@@ -1516,12 +1544,18 @@
         const privacyBtn = card.querySelector('button[data-tt="components_PrivacyCell_TUXButton"]');
         const privacySig = privacyBtn ? (privacyBtn.textContent || '').trim() : '';
         const existingBtn = card.querySelector('.fish-check-btn');
-        // Fast-path O(1): lewati React Fiber walk jika teks privasi kartu tidak berubah
-        if (card.dataset.fishCqState && card.dataset.fishPrivacySig === privacySig) {
+        const reviewState = card.dataset.fishReviewState;
+        const reviewReady = reviewState === 'normal' || (reviewState === 'review' && Boolean(card.querySelector('.fish-review-overlay')));
+
+        // Fast-path O(1): lewati React Fiber walk jika teks privasi & status review kartu tidak berubah
+        if (card.dataset.fishCqState && reviewReady && card.dataset.fishPrivacySig === privacySig) {
           if (card.dataset.fishCqState === 'priv' && !existingBtn) return;
           if (card.dataset.fishCqState === 'pub' && existingBtn) return;
         }
         card.dataset.fishPrivacySig = privacySig;
+
+        const item = getItemDataFromCard(card);
+        syncInReviewOverlay(card, item);
 
         const isPublic = isCardPublic(card);
         if (!isPublic) {

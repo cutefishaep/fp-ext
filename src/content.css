@@ -5561,6 +5561,63 @@ div[data-tt="components_RowLayout_FlexRow"] div[data-tt="VideoCover_index_VideoC
   object-fit: cover !important;
 }
 
+/* Video In-Review / Patched Overlay di Tengah Thumbnail */
+div[data-tt="components_RowLayout_FlexRow"].fish-in-review div[data-tt="components_PostInfoCell_FlexRow"] {
+  opacity: 1 !important;
+}
+
+div[data-tt="components_RowLayout_FlexRow"].fish-in-review div[data-tt="VideoCover_index_VideoCoverContainer"] img {
+  opacity: 0.28 !important;
+  filter: grayscale(0.65) !important;
+}
+
+.fish-review-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 8 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 14px 12px 36px 12px !important;
+  gap: 6px !important;
+  background: rgba(13, 18, 14, 0.52) !important;
+  pointer-events: none !important;
+  box-sizing: border-box !important;
+}
+
+.fish-review-main {
+  color: #f2f7f2 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1.38 !important;
+  max-width: 100% !important;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85) !important;
+}
+
+.fish-review-sub {
+  color: #ffb4ab !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.15px !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85) !important;
+}
+
+@media (max-width: 600px) {
+  .fish-review-overlay {
+    padding: 10px 8px 28px 8px !important;
+    gap: 4px !important;
+  }
+  .fish-review-main {
+    font-size: 10.5px !important;
+  }
+  .fish-review-sub {
+    font-size: 9.5px !important;
+  }
+}
+
 /* Video Cover & Layout di Halaman Home (Recent Posts & Latest Comments) - FIX RAKURSI & TEKS VERTIKAL */
 div[data-tt*="RecentPosts"] div[data-tt="VideoCover_index_VideoCoverContainer"],
 div[data-tt*="RecentPostsCard"] div[data-tt="VideoCover_index_VideoCoverContainer"],
