@@ -352,16 +352,15 @@
         <div class="m3-compress-section">
           <div class="m3-bypass-header">
             <div class="m3-bypass-title-row">
-              <label class="m3-switch" for="m3-compress-toggle" title="Compress video locally with FFmpeg WASM">
+              <label class="m3-switch" for="m3-compress-toggle" title="Compress video before upload">
                 <input type="checkbox" id="m3-compress-toggle" ${isCompress ? 'checked' : ''} />
                 <span class="m3-slider"></span>
               </label>
               <span class="m3-bypass-title">Compress video ?</span>
             </div>
-            <span class="m3-compress-pill">FFmpeg · veryfast</span>
           </div>
           <p class="m3-bypass-desc">
-            Shrinks file size with visually identical quality (H.264 CRF 20 · veryfast). Caches ~31 MB FFmpeg WASM on first use.
+            Compress video locally before upload. First run downloads ~31 MB FFmpeg WASM.
           </p>
         </div>
       </div>
