@@ -16,24 +16,11 @@
   const METHOD_STORAGE_KEY = 'fish_acc_selected_method';
   const WEB_METHODS_JSON_URL = 'https://www.cutefish.my.id/assets/vendor/tiktok-method/methods.json';
   const _webMethodsState = {
-    status: 'WORKING',
-    defaultMethod: 'fish',
-    compress: {
-      maxShortSide: 1080,
-      maxFps: 60,
-      maxBitrateMbps: 50,
-      videoCodec: 'libx264',
-      preset: 'slow',
-      crf: '23',
-      maxrate: '8M',
-      bufsize: '16M',
-      pixFmt: 'yuv420p',
-      profile: 'high',
-      x264Params: 'aq-mode=2',
-      audioCodec: 'aac',
-      audioBitrate: '128k'
-    },
-    methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', supportsCompress: true, file: 'fish.js' }],
+    status: '',
+    defaultMethod: '',
+    modules: {},
+    compress: null,
+    methods: [],
     loaded: false
   };
 
@@ -117,54 +104,38 @@
     }
   };
 
-  const patchViaWebMethodBridge = (arrayBuffer, methodId = 'fish') => new Promise((resolve, reject) => {
-    const reqId = 'patch_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-    const timer = window.setTimeout(() => {
-      window.removeEventListener('message', onMsg);
-      reject(new Error('Web method patch timeout.'));
-    }, 30000);
-
-    const onMsg = (event) => {
-      if (event.source !== window || event.origin !== window.location.origin) return;
-      const msg = event.data;
-      if (!msg || msg.source !== 'fish-acc-main' || msg.type !== 'FISH_PATCH_VIDEO_RESULT' || msg.reqId !== reqId) return;
-      window.clearTimeout(timer);
-      window.removeEventListener('message', onMsg);
-      if (msg.ok && msg.buffer) resolve(msg.buffer);
-      else reject(new Error(msg.error || 'Web method patch failed.'));
-    };
-
-    window.addEventListener('message', onMsg);
-    window.postMessage({
-      source: 'fish-acc-isolated',
-      type: 'FISH_PATCH_VIDEO',
-      reqId,
-      methodId,
-      buffer: arrayBuffer
-    }, window.location.origin, [arrayBuffer]);
-  });
-
-  // Unified Video Calibrator Pipeline (fetch method dari cutefish.my.id, eksekusi via MAIN world bridge)
-  const calibrateVideoFile = async (file, methodId = 'fish') => {
+  const syncAllWebModules = async (methodId = getSelectedMethodId()) => {
+    let data = null;
     try {
-      const mObj = _webMethodsState.methods.find((m) => m.id === methodId);
-      await sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId, methodFile: mObj?.file || '' });
-      log('Patching video using web method (' + methodId + ') from cutefish.my.id...');
-      const buf = await file.arrayBuffer();
-      const patchedAb = await patchViaWebMethodBridge(buf, methodId);
-      if (patchedAb && patchedAb.byteLength > 0) {
-        log('✓ Video patched via web method ' + methodId + ' (size:', patchedAb.byteLength, ')');
-        return new File([patchedAb], file.name, {
-          type: 'video/mp4',
-          lastModified: Date.now()
-        });
+      const directRes = await fetch(WEB_METHODS_JSON_URL, { cache: 'no-store' });
+      if (directRes.ok) {
+        const parsed = await directRes.json();
+        if (parsed && Array.isArray(parsed.methods)) data = parsed;
       }
-    } catch (errWeb) {
-      log('web method notice:', errWeb?.message || errWeb);
+    } catch (_) {}
+    if (!data) {
+      const res = await sendRuntimeMsg({ type: 'GET_WEB_METHODS' });
+      if (res && res.data && Array.isArray(res.data.methods)) data = res.data;
     }
+    if (!data || !data.methods.length) return null;
 
-    log('Video handed over untouched as fallback');
-    return file;
+    _webMethodsState.status = data.status || 'WORKING';
+    _webMethodsState.defaultMethod = data.defaultMethod || data.methods[0].id || 'fish';
+    _webMethodsState.modules = (data.modules && typeof data.modules === 'object') ? data.modules : {};
+    _webMethodsState.compress = (data.compress && typeof data.compress === 'object') ? data.compress : null;
+    _webMethodsState.methods = data.methods;
+    _webMethodsState.loaded = true;
+
+    const targetId = methodId || getSelectedMethodId();
+    const selObj = _webMethodsState.methods.find((m) => m.id === targetId) || _webMethodsState.methods[0];
+    const mods = _webMethodsState.modules;
+    await Promise.all([
+      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: 'engine', methodFile: mods.engine || 'engine.js' }),
+      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: 'compress', methodFile: mods.compress || 'compress.js' }),
+      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: 'normalize', methodFile: mods.normalize || 'normalize.js' }),
+      selObj ? sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: selObj.id, methodFile: selObj.file || `${selObj.id}.js` }) : Promise.resolve()
+    ]);
+    return data;
   };
 
   const _uploadVersionState = {
@@ -471,27 +442,8 @@
       });
     }
 
-    const loadWebMethodsFromSite = async () => {
-      let data = null;
-      try {
-        const directRes = await fetch(WEB_METHODS_JSON_URL, { cache: 'no-store' });
-        if (directRes.ok) {
-          const parsed = await directRes.json();
-          if (parsed && Array.isArray(parsed.methods)) data = parsed;
-        }
-      } catch (_) {}
-      if (!data) {
-        const res = await sendRuntimeMsg({ type: 'GET_WEB_METHODS' });
-        if (res && res.data && Array.isArray(res.data.methods)) data = res.data;
-      }
-      if (!data || !data.methods.length) return;
-      _webMethodsState.status = data.status || 'WORKING';
-      _webMethodsState.defaultMethod = data.defaultMethod || data.methods[0].id || 'fish';
-      if (data.compress && typeof data.compress === 'object') {
-        _webMethodsState.compress = { ..._webMethodsState.compress, ...data.compress };
-      }
-      _webMethodsState.methods = data.methods;
-      _webMethodsState.loaded = true;
+    syncAllWebModules(getSelectedMethodId()).then((data) => {
+      if (!data) return;
       const sw = document.getElementById('m3-method-switch');
       if (sw) {
         const cur = getSelectedMethodId();
@@ -503,11 +455,7 @@
       }
       updateMethodStatusBadge();
       syncCardControlsFromState();
-      const selObj = getSelectedMethodObj();
-      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: getSelectedMethodId(), methodFile: selObj?.file || '' });
-    };
-
-    loadWebMethodsFromSite();
+    });
 
     if (wmInput) {
       wmInput.addEventListener('input', (e) => {
@@ -713,7 +661,7 @@
     return bytes;
   };
 
-  const compressVideoViaOffscreen = async (file, onProgress = () => {}) => {
+  const execFFmpegViaOffscreen = async ({ inputName, inputBytes, args, outputName }, onProgress = () => {}) => {
     const ensureRes = await new Promise((resolve) => {
       chrome.runtime.sendMessage({ type: 'ENSURE_OFFSCREEN' }, resolve);
     });
@@ -721,15 +669,14 @@
       throw new Error(ensureRes?.error || 'Failed to start FFmpeg offscreen worker.');
     }
 
-    const inputBytes = new Uint8Array(await file.arrayBuffer());
+    const u8 = inputBytes instanceof Uint8Array ? inputBytes : new Uint8Array(inputBytes);
     const CHUNK_SIZE = 2 * 1024 * 1024;
-    const totalChunks = Math.max(1, Math.ceil(inputBytes.byteLength / CHUNK_SIZE));
+    const totalChunks = Math.max(1, Math.ceil(u8.byteLength / CHUNK_SIZE));
 
     return new Promise((resolve, reject) => {
-      const port = chrome.runtime.connect({ name: 'fa-ffmpeg-compress' });
+      const port = chrome.runtime.connect({ name: 'fa-ffmpeg-exec' });
       let outChunks = [];
       let outTotalSize = 0;
-      let resultMeta = {};
       let settled = false;
 
       port.onDisconnect.addListener(() => {
@@ -748,7 +695,6 @@
         if (msg.type === 'RESULT_INIT') {
           outChunks = [];
           outTotalSize = Number(msg.totalSize) || 0;
-          resultMeta = msg;
           return;
         }
         if (msg.type === 'RESULT_CHUNK' && typeof msg.b64 === 'string') {
@@ -764,40 +710,74 @@
             merged.set(c, off);
             off += c.byteLength;
           }
-          const outName = file.name.replace(/\.[^.]+$/, '') + '.mp4';
-          const outFile = new File([merged], outName, { type: 'video/mp4', lastModified: Date.now() });
-          resolve({
-            file: outFile,
-            origSize: resultMeta.origSize || inputBytes.byteLength,
-            outSize: merged.byteLength,
-            skippedLarger: Boolean(resultMeta.skippedLarger)
-          });
+          resolve(merged);
           return;
         }
         if (msg.type === 'ERROR') {
           settled = true;
           try { port.disconnect(); } catch (_) {}
-          reject(new Error(msg.error || 'FFmpeg compression failed.'));
+          reject(new Error(msg.error || 'FFmpeg execution failed.'));
         }
       });
 
       port.postMessage({
         type: 'INIT',
-        fileName: file.name,
-        totalSize: inputBytes.byteLength,
-        totalChunks,
-        compressConfig: {
-          ...(_webMethodsState.compress || {}),
-          compressMode: typeof getCompressMode === 'function' ? getCompressMode() : '1080p'
-        }
+        inputName: inputName || 'input.mp4',
+        outputName: outputName || 'output.mp4',
+        args: Array.isArray(args) ? args : [],
+        totalSize: u8.byteLength,
+        totalChunks
       });
       for (let i = 0; i < totalChunks; i++) {
-        const slice = inputBytes.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const slice = u8.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         port.postMessage({ type: 'CHUNK', index: i, b64: uint8ToBase64(slice) });
       }
       port.postMessage({ type: 'COMMIT' });
     });
   };
+
+  // Relay generic FFmpeg execution requests from MAIN world web modules -> Offscreen Worker
+  window.addEventListener('message', async (event) => {
+    if (event.source !== window || event.origin !== window.location.origin) return;
+    const msg = event.data;
+    if (!msg || msg.source !== 'fish-acc-main' || msg.type !== 'FISH_FFMPEG_EXEC') return;
+
+    const reply = (ok, buffer, error) => {
+      try {
+        const transfer = buffer instanceof ArrayBuffer ? [buffer] : [];
+        window.postMessage({
+          source: 'fish-acc-isolated',
+          type: 'FISH_FFMPEG_EXEC_RESULT',
+          reqId: msg.reqId,
+          ok,
+          buffer: buffer || null,
+          error: error || ''
+        }, window.location.origin, transfer);
+      } catch (_) {}
+    };
+
+    try {
+      const outU8 = await execFFmpegViaOffscreen({
+        inputName: msg.inputName,
+        inputBytes: new Uint8Array(msg.buffer),
+        args: msg.args,
+        outputName: msg.outputName
+      }, (prog) => {
+        try {
+          window.postMessage({
+            source: 'fish-acc-isolated',
+            type: 'FISH_FFMPEG_PROGRESS',
+            reqId: msg.reqId,
+            percent: prog.percent || 0
+          }, window.location.origin);
+        } catch (_) {}
+      });
+      const outAb = outU8.buffer.slice(outU8.byteOffset, outU8.byteOffset + outU8.byteLength);
+      reply(true, outAb, '');
+    } catch (err) {
+      reply(false, null, err?.message || String(err));
+    }
+  });
 
   const processAndCalibrateFile = async (file) => {
     if (_activePatching) return;
@@ -883,56 +863,70 @@
     };
 
     try {
-      const limits = await inspectVideoLimits(file);
-      if (limits.exceedsLimit) {
+      if (!_webMethodsState.loaded) {
+        await syncAllWebModules(getSelectedMethodId());
+      }
+      setProgress(5, 'Preparing...');
+      const duration = await probeVideoDuration(file);
+      const ab = await file.arrayBuffer();
+      const reqId = 'pipe_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+
+      const pipeRes = await new Promise((resolve, reject) => {
+        const timer = window.setTimeout(() => {
+          window.removeEventListener('message', onPipeMsg);
+          reject(new Error('Web pipeline timeout.'));
+        }, 360000);
+
+        const onPipeMsg = (event) => {
+          if (event.source !== window || event.origin !== window.location.origin) return;
+          const msg = event.data;
+          if (!msg || msg.source !== 'fish-acc-main' || msg.reqId !== reqId) return;
+          if (msg.type === 'FISH_PIPELINE_PROGRESS') {
+            if (typeof msg.pct === 'number' && !isNaN(msg.pct)) {
+              setProgress(msg.pct, msg.status !== undefined ? msg.status : null);
+            } else if (msg.status) {
+              setProgress(parseInt(percentEl?.textContent || '0', 10) || 0, msg.status);
+            }
+            return;
+          }
+          if (msg.type === 'FISH_RUN_WEB_PIPELINE_RESULT') {
+            window.clearTimeout(timer);
+            window.removeEventListener('message', onPipeMsg);
+            if (msg.ok && msg.buffer) resolve(msg);
+            else reject(new Error(msg.error || 'Web pipeline failed.'));
+          }
+        };
+
+        window.addEventListener('message', onPipeMsg);
+        window.postMessage({
+          source: 'fish-acc-isolated',
+          type: 'FISH_RUN_WEB_PIPELINE',
+          reqId,
+          fileName: file.name,
+          fileType: file.type || 'video/mp4',
+          fileSize: file.size,
+          duration,
+          methodId: getSelectedMethodId(),
+          compressMode: typeof getCompressMode === 'function' ? getCompressMode() : '1080p',
+          doBypass: isBypassUploadEnabled(),
+          compressConfig: _webMethodsState.compress,
+          buffer: ab
+        }, window.location.origin, [ab]);
+      });
+
+      if (pipeRes.limits?.exceedsLimit) {
         setCompressLimitLock(
           true,
-          `Video melebihi batas (maks 1080p, 60 FPS, 50 Mbps): ${limits.reasons.join(', ')}. Compress Video diaktifkan otomatis dan tidak dapat dimatikan.`
+          `Video melebihi batas (maks 1080p, 60 FPS, 50 Mbps): ${pipeRes.limits.reasons.join(', ')}. Compress Video diaktifkan otomatis.`
         );
       } else {
         setCompressLimitLock(false);
       }
 
-      const selMethodObj = getSelectedMethodObj();
-      const supportsCompress = !selMethodObj || selMethodObj.supportsCompress !== false;
-      const doCompress = supportsCompress && (limits.exceedsLimit || isCompressVideoEnabled());
-      const doBypass = isBypassUploadEnabled();
-      let workingFile = file;
-
-      if (doCompress) {
-        log('Compressing video:', file.name);
-        const maxCompressPct = doBypass ? 82 : 98;
-        setProgress(2, 'Preparing...');
-        const compRes = await compressVideoViaOffscreen(workingFile, (prog) => {
-          if (prog.stage === 'wasm') {
-            const p = 2 + Math.round((prog.percent / 100) * 20);
-            setProgress(p, prog.detail || 'Downloading...');
-          } else if (prog.stage === 'compress') {
-            const p = 22 + Math.round((prog.percent / 100) * (maxCompressPct - 22));
-            setProgress(p, 'Compressing...');
-          }
-        });
-        workingFile = compRes.file;
-        log(
-          compRes.skippedLarger
-            ? `✓ Compression skipped (${(compRes.origSize / 1048576).toFixed(2)} MB)`
-            : `✓ Compressed ${(compRes.origSize / 1048576).toFixed(2)} MB -> ${(compRes.outSize / 1048576).toFixed(2)} MB`
-        );
-      }
-
-      if (doBypass) {
-        log('Processing video:', workingFile.name);
-        const startPct = doCompress ? 82 : 10;
-        setProgress(startPct, doCompress ? 'Processing...' : '');
-        const patchPromise = calibrateVideoFile(workingFile, getSelectedMethodId());
-        await Promise.all([patchPromise, animateProgress(startPct, 95, 280)]);
-        workingFile = await patchPromise;
-      }
-
+      const outName = file.name.replace(/\.[^.]+$/, '') + '.mp4';
+      const workingFile = new File([pipeRes.buffer], outName, { type: 'video/mp4', lastModified: Date.now() });
       await animateProgress(95, 100, 120);
       restoreDropzone();
-
-      // Handover hasil akhir ke panel upload TikTok
       handoverFileToUploadPanel(fileInput, workingFile);
     } catch (err) {
       log('Calibration error:', err?.message || err);

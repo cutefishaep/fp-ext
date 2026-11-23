@@ -30,20 +30,22 @@
   };
 
   chrome.runtime.onConnect.addListener((port) => {
-    if (!port || port.name !== 'fa-ffmpeg-compress') return;
+    if (!port || port.name !== 'fa-ffmpeg-exec') return;
 
-    let fileName = 'video.mp4';
+    let inputName = 'input.mp4';
+    let outputName = 'output.mp4';
+    let args = [];
     let totalSize = 0;
-    let compressConfig = null;
     let incomingChunks = [];
 
     port.onMessage.addListener((msg) => {
       if (!msg || !msg.type) return;
 
       if (msg.type === 'INIT') {
-        fileName = msg.fileName || 'video.mp4';
+        inputName = msg.inputName || 'input.mp4';
+        outputName = msg.outputName || 'output.mp4';
+        args = Array.isArray(msg.args) ? msg.args : [];
         totalSize = Number(msg.totalSize) || 0;
-        compressConfig = (msg.compressConfig && typeof msg.compressConfig === 'object') ? msg.compressConfig : null;
         incomingChunks = [];
         return;
       }
@@ -79,10 +81,7 @@
               port.postMessage({
                 type: 'RESULT_INIT',
                 totalSize: outBytes.byteLength,
-                totalChunks,
-                origSize: data.origSize,
-                outSize: data.outSize,
-                skippedLarger: Boolean(data.skippedLarger)
+                totalChunks
               });
               for (let i = 0; i < totalChunks; i++) {
                 const slice = outBytes.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
@@ -99,7 +98,12 @@
         };
 
         worker.addEventListener('message', onWorkerMsg);
-        worker.postMessage({ type: 'COMPRESS', buffer: merged.buffer, fileName, compressConfig }, [merged.buffer]);
+        worker.postMessage({
+          type: 'EXEC_FFMPEG',
+          inputFiles: [{ name: inputName, buffer: merged.buffer }],
+          args,
+          outputName
+        }, [merged.buffer]);
       }
     });
   });

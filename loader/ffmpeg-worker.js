@@ -99,21 +99,28 @@ const ensureCore = async (emitProgress) => {
 
 self.onmessage = async (e) => {
   const msg = e.data;
-  if (!msg || msg.type !== 'COMPRESS') return;
+  if (!msg || msg.type !== 'EXEC_FFMPEG') return;
 
   const emitProgress = (stage, percent, detail = '') => {
     self.postMessage({ type: 'PROGRESS', stage, percent, detail });
   };
 
   try {
+    const args = Array.isArray(msg.args) ? msg.args.map(String) : [];
+    const outputName = String(msg.outputName || 'output.mp4').replace(/^\/+/, '');
+    const inputFiles = Array.isArray(msg.inputFiles) ? msg.inputFiles : [];
+    if (!args.length || !outputName || outputName.includes('..')) {
+      throw new Error('Invalid FFmpeg execution parameters.');
+    }
+
     const core = await ensureCore(emitProgress);
-    const inputBytes = new Uint8Array(msg.buffer);
-    const origSize = inputBytes.byteLength;
 
-    try { core.FS.unlink('/input.mp4'); } catch (_) {}
-    try { core.FS.unlink('/output.mp4'); } catch (_) {}
-
-    core.FS.writeFile('/input.mp4', inputBytes);
+    for (const f of inputFiles) {
+      const name = String(f.name || 'input.mp4').replace(/^\/+/, '');
+      try { core.FS.unlink('/' + name); } catch (_) {}
+      core.FS.writeFile('/' + name, new Uint8Array(f.buffer));
+    }
+    try { core.FS.unlink('/' + outputName); } catch (_) {}
 
     let lastProgressAt = 0;
     core.setProgress(({ progress }) => {
@@ -121,91 +128,45 @@ self.onmessage = async (e) => {
       if (now - lastProgressAt < 100) return;
       lastProgressAt = now;
       const pct = Math.max(0, Math.min(99, Math.round((progress || 0) * 100)));
-      emitProgress('compress', pct, 'Compressing...');
+      emitProgress('ffmpeg', pct, 'Processing...');
     });
 
-    const fetchWebCompressConfig = async () => {
-      try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 5000);
-        const res = await fetch('https://www.cutefish.my.id/assets/vendor/tiktok-method/methods.json', { cache: 'no-store', signal: ctrl.signal });
-        clearTimeout(t);
-        if (res.ok) {
-          const json = await res.json();
-          if (json && json.compress && typeof json.compress === 'object') return json.compress;
-        }
-      } catch (_) {}
-      return null;
-    };
+    const normArgs = args.map((a) => {
+      const clean = a.replace(/^\/+/, '');
+      if (clean === outputName || inputFiles.some((f) => String(f.name || '').replace(/^\/+/, '') === clean)) {
+        return '/' + clean;
+      }
+      return a;
+    });
 
-    const liveCfg = await fetchWebCompressConfig();
-    const msgCfg = (msg.compressConfig && typeof msg.compressConfig === 'object') ? msg.compressConfig : {};
-    const cfg = { ...msgCfg, ...(liveCfg || {}), compressMode: msgCfg.compressMode || '1080p' };
-    const vCodec = String(cfg.videoCodec || 'libx264');
-    const preset = String(cfg.preset || 'slow');
-    const crf = String(cfg.crf || '23');
-    const pixFmt = String(cfg.pixFmt || 'yuv420p');
-    const profile = String(cfg.profile || 'high');
-    const aCodec = String(cfg.audioCodec || 'aac');
-    const aBitrate = String(cfg.audioBitrate || '128k');
-    const targetMode = String(cfg.compressMode || '1080p');
-    const maxDim = targetMode === '720p' ? 720 : (Number(cfg.maxShortSide) || 1080);
-    const scaleFilter = targetMode === '720p'
-      ? `scale='if(gt(iw,ih),-2,${maxDim})':'if(gt(iw,ih),${maxDim},-2)':flags=lanczos`
-      : `scale='if(gt(iw,ih),-2,min(${maxDim},iw))':'if(gt(iw,ih),min(${maxDim},ih),-2)':flags=lanczos`;
+    const ret = core.exec(...normArgs);
 
-    const baseArgs = [
-      '-y', '-i', '/input.mp4',
-      '-map', '0:v:0', '-map', '0:a?',
-      '-vf', scaleFilter,
-      '-c:v', vCodec,
-      '-preset', preset,
-      '-crf', crf,
-      ...(cfg.maxrate ? ['-maxrate', String(cfg.maxrate)] : []),
-      ...(cfg.bufsize ? ['-bufsize', String(cfg.bufsize)] : []),
-      '-pix_fmt', pixFmt,
-      '-profile:v', profile,
-      ...(cfg.x264Params && vCodec === 'libx264' ? ['-x264-params', String(cfg.x264Params)] : []),
-      '-movflags', '+faststart'
-    ];
+    let outBytes = null;
+    try {
+      outBytes = core.FS.readFile('/' + outputName);
+    } catch (_) {}
 
-    let ret = core.exec(...baseArgs, '-c:a', 'copy', '/output.mp4');
-    if (ret !== 0) {
-      try { core.FS.unlink('/output.mp4'); } catch (_) {}
-      core.reset();
-      ret = core.exec(...baseArgs, '-c:a', aCodec, '-b:a', aBitrate, '/output.mp4');
+    for (const f of inputFiles) {
+      const name = String(f.name || 'input.mp4').replace(/^\/+/, '');
+      try { core.FS.unlink('/' + name); } catch (_) {}
     }
-
-    if (ret !== 0) {
-      throw new Error(`FFmpeg exited with code ${ret}`);
-    }
-
-    const outBytes = core.FS.readFile('/output.mp4');
-    try { core.FS.unlink('/input.mp4'); } catch (_) {}
-    try { core.FS.unlink('/output.mp4'); } catch (_) {}
+    try { core.FS.unlink('/' + outputName); } catch (_) {}
     core.reset();
 
-    if (outBytes.byteLength >= origSize) {
-      const origCopy = inputBytes.slice().buffer;
-      self.postMessage({
-        type: 'DONE',
-        buffer: origCopy,
-        origSize,
-        outSize: origSize,
-        skippedLarger: true
-      }, [origCopy]);
-      return;
+    if (ret !== 0 && (!outBytes || outBytes.byteLength < 1024)) {
+      throw new Error(`FFmpeg exited with code ${ret}`);
+    }
+    if (!outBytes || outBytes.byteLength === 0) {
+      throw new Error('FFmpeg produced empty output.');
     }
 
     const outBuf = outBytes.slice().buffer;
     self.postMessage({
       type: 'DONE',
       buffer: outBuf,
-      origSize,
-      outSize: outBytes.byteLength,
-      skippedLarger: false
+      outSize: outBytes.byteLength
     }, [outBuf]);
   } catch (err) {
-    self.postMessage({ type: 'ERROR', error: err?.message || 'FFmpeg compression failed.' });
+    self.postMessage({ type: 'ERROR', error: err?.message || 'FFmpeg execution failed.' });
   }
 };

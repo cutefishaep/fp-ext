@@ -172,7 +172,7 @@ const fetchWebMethodsConfig = async () => {
   } catch (_) {}
   return {
     ok: false,
-    data: { status: 'WORKING', defaultMethod: 'fish', methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', file: 'fish.js' }] }
+    data: null
   };
 };
 
@@ -200,7 +200,7 @@ const syncWebMethodUserScript = async (methodId = 'fish', tabId = null, methodFi
   if (await isUserScriptsAvailable()) {
     try {
       await upsertUserScript({
-        id: WEB_METHOD_SCRIPT_ID,
+        id: `fp-ext-web-${cleanId}`,
         matches: STUDIO_MATCHES,
         js: [{ code }],
         world: 'MAIN',

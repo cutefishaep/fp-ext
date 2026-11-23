@@ -162,11 +162,7 @@ const fetchWebMethodsConfig = async () => {
 
   return {
     ok: false,
-    data: {
-      status: 'WORKING',
-      defaultMethod: 'fish',
-      methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', file: 'fish.js' }]
-    }
+    data: null
   };
 };
 
@@ -197,10 +193,11 @@ const syncWebMethodUserScript = async (methodId = 'fish', tabId = null, methodFi
 
   if (await isUserScriptsAvailable()) {
     try {
-      const existing = await chrome.userScripts.getScripts({ ids: [WEB_METHOD_SCRIPT_ID] });
+      const scriptId = `fp-ext-web-${cleanId}`;
+      const existing = await chrome.userScripts.getScripts({ ids: [scriptId] });
       if (existing && existing.length > 0) {
         await chrome.userScripts.update([{
-          id: WEB_METHOD_SCRIPT_ID,
+          id: scriptId,
           matches: STUDIO_MATCHES,
           js: [{ code }],
           world: 'MAIN',
@@ -208,7 +205,7 @@ const syncWebMethodUserScript = async (methodId = 'fish', tabId = null, methodFi
         }]);
       } else {
         await chrome.userScripts.register([{
-          id: WEB_METHOD_SCRIPT_ID,
+          id: scriptId,
           matches: STUDIO_MATCHES,
           js: [{ code }],
           world: 'MAIN',
