@@ -37,12 +37,26 @@ const sha256HexBuffer = async (arrayBuffer) => {
   return hex;
 };
 
+let _cachedCoreVersion = null;
+const getVersions = async () => {
+  const loaderVersion = chrome.runtime.getManifest().version;
+  if (_cachedCoreVersion) return { loaderVersion, coreVersion: _cachedCoreVersion };
+  try {
+    const res = await fetch(chrome.runtime.getURL('core-version.json'), { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data?.coreVersion) _cachedCoreVersion = String(data.coreVersion);
+    }
+  } catch (_) {}
+  return { loaderVersion, coreVersion: _cachedCoreVersion || loaderVersion };
+};
+
 const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   const emit = (percent, title, detail = '') => {
     try { onProgress({ percent, title, detail }); } catch (_) {}
   };
 
-  const currentVersion = chrome.runtime.getManifest().version;
+  const { loaderVersion, coreVersion: currentVersion } = await getVersions();
   emit(8, 'Checking for updates...', 'Fetching latest release metadata from GitHub...');
 
   let release;
@@ -209,6 +223,7 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
 
   const cachePayload = {
     checkedAt: Date.now(),
+    loaderVersion,
     currentVersion,
     latestVersion,
     releaseUrl,
@@ -487,12 +502,13 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
   const candidateUrl = changeInfo.url || (changeInfo.status === 'loading' ? tab?.url : null);
   if (!candidateUrl || !TIKTOK_STUDIO_URL_RE.test(candidateUrl)) return;
 
-  const currentVersion = chrome.runtime.getManifest().version;
-  chrome.storage?.session?.get(SESSION_VERIFIED_KEY, (data) => {
-    const sess = data?.[SESSION_VERIFIED_KEY];
-    if (sess && sess.verified && sess.version === currentVersion) return;
-    const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
-    chrome.tabs.update(tabId, { url: gateUrl });
+  getVersions().then(({ coreVersion }) => {
+    chrome.storage?.session?.get(SESSION_VERIFIED_KEY, (data) => {
+      const sess = data?.[SESSION_VERIFIED_KEY];
+      if (sess && sess.verified && sess.version === coreVersion) return;
+      const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
+      chrome.tabs.update(tabId, { url: gateUrl });
+    });
   });
 });
 
@@ -561,15 +577,22 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'GET_VERSIONS') {
+    getVersions().then((v) => sendResponse(v));
+    return true;
+  }
+
   if (message.type === 'APPROVE_SESSION') {
-    const payload = {
-      version: chrome.runtime.getManifest().version,
-      verified: true,
-      bypassed: Boolean(message.bypassed),
-      verifiedAt: Date.now()
-    };
-    chrome.storage?.session?.set({ [SESSION_VERIFIED_KEY]: payload }, () => {
-      sendResponse({ ok: true });
+    getVersions().then(({ coreVersion }) => {
+      const payload = {
+        version: coreVersion,
+        verified: true,
+        bypassed: Boolean(message.bypassed),
+        verifiedAt: Date.now()
+      };
+      chrome.storage?.session?.set({ [SESSION_VERIFIED_KEY]: payload }, () => {
+        sendResponse({ ok: true });
+      });
     });
     return true;
   }

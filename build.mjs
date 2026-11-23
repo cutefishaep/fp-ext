@@ -257,11 +257,16 @@ function createCrx3(zipBuffer) {
 }
 
 function packZipAndCrx() {
-  const manifest = JSON.parse(readFileSync(join(root, 'src/manifest.json'), 'utf8'));
+  const manifest = JSON.parse(readTextLf(join(root, 'src/manifest.json')));
+  const coreMeta = existsSync(join(root, 'src/core-version.json'))
+    ? JSON.parse(readTextLf(join(root, 'src/core-version.json')))
+    : {};
+  const loaderVersion = manifest.version;
+  const coreVersion = coreMeta.coreVersion || loaderVersion;
   const slug = String(manifest.name || 'extension')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const zipName = `${slug}-v${manifest.version}.zip`;
-  const crxName = `${slug}-v${manifest.version}.crx`;
+  const zipName = `${slug}-v${coreVersion}.zip`;
+  const crxName = `${slug}-v${coreVersion}.crx`;
 
   const outDir = join(root, 'build');
   mkdirSync(outDir, { recursive: true });
@@ -275,6 +280,7 @@ function packZipAndCrx() {
 
   const runtimeFiles = [
     'manifest.json',
+    'core-version.json',
     'content.js',
     'isolated.js',
     'background.js',
@@ -319,7 +325,8 @@ function packZipAndCrx() {
     fileHashes[f.name] = sha256Hex(f.data);
   }
   const integrity = {
-    version: manifest.version,
+    version: coreVersion,
+    loaderVersion,
     generatedAt: new Date().toISOString(),
     packages: {
       zip: { name: zipName, sha256: sha256Hex(zipBuffer) },

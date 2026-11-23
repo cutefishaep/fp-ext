@@ -17,6 +17,12 @@
 
   const manifest = chrome.runtime.getManifest();
   const versionPill = document.getElementById('version-pill');
+  const loaderVersionEl = document.getElementById('loader-version');
+  if (loaderVersionEl) loaderVersionEl.textContent = `Loader v${manifest.version}`;
+  chrome.runtime.sendMessage({ type: 'GET_VERSIONS' }, (v) => {
+    if (v?.coreVersion && versionPill) versionPill.textContent = `Core v${v.coreVersion}`;
+    if (v?.loaderVersion && loaderVersionEl) loaderVersionEl.textContent = `Loader v${v.loaderVersion}`;
+  });
   const statusBox = document.getElementById('status-box');
   const statusTitle = document.getElementById('status-title');
   const statusDesc = document.getElementById('status-desc');
