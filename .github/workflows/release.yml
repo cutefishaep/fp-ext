@@ -1,0 +1,126 @@
+name: Build & Publish Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]*'
+      - '[0-9]*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Resolve version & sync manifest.json
+        id: meta
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]]; then
+            echo "Tag '$TAG' bukan format versi Chrome valid (contoh: v1.0, v0.3.10, 1.0, 1.2.3)"
+            exit 1
+          fi
+
+          node -e "
+            const fs = require('fs');
+            const p = 'src/manifest.json';
+            const m = JSON.parse(fs.readFileSync(p, 'utf8'));
+            if (m.version !== '${VERSION}') {
+              m.version = '${VERSION}';
+              fs.writeFileSync(p, JSON.stringify(m, null, 2) + '\n', 'utf8');
+              console.log('Synced src/manifest.json version -> ${VERSION}');
+            }
+          "
+
+          PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${TAG}$" | head -n 1 || true)
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Build extension (.zip & .crx)
+        env:
+          CRX_PRIVATE_KEY: ${{ secrets.CRX_PRIVATE_KEY }}
+        run: node build.mjs
+
+      - name: Verify build artifacts
+        shell: bash
+        run: |
+          ZIP="build/fish-acceleration-v${{ steps.meta.outputs.version }}.zip"
+          CRX="build/fish-acceleration-v${{ steps.meta.outputs.version }}.crx"
+          test -s "$ZIP"
+          test -s "$CRX"
+          node -e "
+            const fs = require('fs');
+            const crx = fs.readFileSync('${CRX}');
+            if (crx.subarray(0, 4).toString('ascii') !== 'Cr24' || crx.readUInt32LE(4) !== 3) {
+              throw new Error('Invalid CRX3 header');
+            }
+            console.log('Verified CRX3 header: Cr24 v3');
+          "
+          ls -lh "$ZIP" "$CRX"
+
+      - name: Generate release notes
+        shell: bash
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          VER="${{ steps.meta.outputs.version }}"
+          PREV="${{ steps.meta.outputs.prev_tag }}"
+
+          {
+            echo "## Fish Acceleration v${VER}"
+            echo ""
+            if [ -n "$PREV" ]; then
+              echo "### Perubahan"
+              git log "${PREV}..${TAG}" --pretty=format:"- %s (%h)" --no-merges
+              echo ""
+              echo ""
+            fi
+            echo "### Instalasi"
+            echo "**Opsi 1 — Load Unpacked (\`.zip\`):**"
+            echo "1. Download \`fish-acceleration-v${VER}.zip\`"
+            echo "2. Extract ke folder baru"
+            echo "3. Buka \`chrome://extensions\` → aktifkan **Developer mode** → klik **Load unpacked** → pilih folder hasil extract"
+            echo ""
+            echo "**Opsi 2 — Paket CRX (\`.crx\`):**"
+            echo "1. Download \`fish-acceleration-v${VER}.crx\`"
+            echo "2. Buka \`chrome://extensions\` → aktifkan **Developer mode** → drag & drop file \`.crx\`"
+            if [ -n "$PREV" ]; then
+              echo ""
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
+            fi
+          } > release-notes.md
+          cat release-notes.md
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          VER="${{ steps.meta.outputs.version }}"
+          ZIP="build/fish-acceleration-v${VER}.zip"
+          CRX="build/fish-acceleration-v${VER}.crx"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ZIP" "$CRX" --clobber
+            gh release edit "$TAG" --title "Fish Acceleration v${VER}" --notes-file release-notes.md
+          else
+            gh release create "$TAG" "$ZIP" "$CRX" \
+              --title "Fish Acceleration v${VER}" \
+              --notes-file release-notes.md \
+              --latest
+          fi

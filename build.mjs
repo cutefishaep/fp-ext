@@ -19,10 +19,11 @@
  *
  * NOTE: src/content.js, src/isolated.js, and src/content.css are GENERATED files.
  */
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateRawSync } from 'node:zlib';
+import { createHash, createPrivateKey, createPublicKey, createSign, generateKeyPairSync } from 'node:crypto';
 import vm from 'node:vm';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -184,17 +185,88 @@ function createZip(files) {
   return Buffer.concat(chunks);
 }
 
-function packZip() {
+// ---------------------------------------------------------------------------
+// Minimal CRX3 writer (zero dependencies — official Chrome CRX3 spec)
+// ---------------------------------------------------------------------------
+function encodeVarint(value) {
+  const bytes = [];
+  let v = value >>> 0;
+  while (v >= 0x80) {
+    bytes.push((v & 0x7f) | 0x80);
+    v >>>= 7;
+  }
+  bytes.push(v);
+  return Buffer.from(bytes);
+}
+
+function pbBytes(fieldNum, buf) {
+  return Buffer.concat([
+    encodeVarint((fieldNum << 3) | 2),
+    encodeVarint(buf.length),
+    buf
+  ]);
+}
+
+function loadOrGenerateCrxKey() {
+  const envKey = process.env.CRX_PRIVATE_KEY;
+  if (envKey && envKey.trim()) {
+    const normalized = envKey.includes('\\n') ? envKey.replace(/\\n/g, '\n') : envKey;
+    return { key: createPrivateKey(normalized), source: 'env:CRX_PRIVATE_KEY' };
+  }
+  const localPem = join(root, 'extension.pem');
+  if (existsSync(localPem)) {
+    return { key: createPrivateKey(readFileSync(localPem, 'utf8')), source: 'extension.pem' };
+  }
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  return { key: privateKey, source: 'ephemeral RSA-2048' };
+}
+
+function createCrx3(zipBuffer) {
+  const { key: privateKey, source } = loadOrGenerateCrxKey();
+  const publicKeyDer = createPublicKey(privateKey).export({ type: 'spki', format: 'der' });
+
+  // CRX ID = first 16 bytes of SHA-256(publicKeyDer)
+  const crxId = createHash('sha256').update(publicKeyDer).digest().subarray(0, 16);
+  const signedHeaderData = pbBytes(1, crxId);
+
+  // Signature over: "CRX3 SignedData\0" + uint32LE(signedHeaderData.length) + signedHeaderData + zipBuffer
+  const prefix = Buffer.from('CRX3 SignedData\0', 'ascii');
+  const lenBuf = Buffer.alloc(4);
+  lenBuf.writeUInt32LE(signedHeaderData.length, 0);
+
+  const signer = createSign('RSA-SHA256');
+  signer.update(prefix);
+  signer.update(lenBuf);
+  signer.update(signedHeaderData);
+  signer.update(zipBuffer);
+  const signature = signer.sign(privateKey);
+
+  // CrxFileHeader protobuf:
+  //   field 2 (sha256_with_rsa): AsymmetricKeyProof { field 1: public_key, field 2: signature }
+  //   field 10000 (signed_header_data): SignedData
+  const proof = Buffer.concat([pbBytes(1, publicKeyDer), pbBytes(2, signature)]);
+  const header = Buffer.concat([pbBytes(2, proof), pbBytes(10000, signedHeaderData)]);
+
+  const preamble = Buffer.alloc(12);
+  preamble.write('Cr24', 0, 'ascii');
+  preamble.writeUInt32LE(3, 4);
+  preamble.writeUInt32LE(header.length, 8);
+
+  return { crxBuffer: Buffer.concat([preamble, header, zipBuffer]), source };
+}
+
+function packZipAndCrx() {
   const manifest = JSON.parse(readFileSync(join(root, 'src/manifest.json'), 'utf8'));
   const slug = String(manifest.name || 'extension')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
   const zipName = `${slug}-v${manifest.version}.zip`;
+  const crxName = `${slug}-v${manifest.version}.crx`;
 
   const outDir = join(root, 'build');
   mkdirSync(outDir, { recursive: true });
 
   for (const f of readdirSync(outDir)) {
-    if (new RegExp(`^${slug}-v[\\d.]+\\.zip$`).test(f) && f !== zipName) {
+    if (new RegExp(`^${slug}-v[\\d.]+\\.(zip|crx)$`).test(f) && f !== zipName && f !== crxName) {
       unlinkSync(join(outDir, f));
       console.log(`- removed old ${f}`);
     }
@@ -211,10 +283,17 @@ function packZip() {
     files.push({ name: iconPath, data: readFileSync(join(root, 'src', iconPath)) });
   }
 
+  const zipBuffer = createZip(files);
   const zipPath = join(outDir, zipName);
-  writeFileSync(zipPath, createZip(files));
+  writeFileSync(zipPath, zipBuffer);
   const kb = (files.reduce((n, f) => n + f.data.length, 0) / 1024).toFixed(0);
   console.log(`✓ build/${zipName.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB uncompressed)`);
+
+  const { crxBuffer, source } = createCrx3(zipBuffer);
+  const crxPath = join(outDir, crxName);
+  writeFileSync(crxPath, crxBuffer);
+  const crxKb = (crxBuffer.length / 1024).toFixed(1);
+  console.log(`✓ build/${crxName.padEnd(30)} CRX3      (${crxKb} KB, key: ${source})`);
 }
 
 console.log('Building Fish Acceleration...');
@@ -222,5 +301,5 @@ checkJsSyntax(readFileSync(join(root, 'src/background.js'), 'utf8'), 'src/backgr
 buildContentJs();
 buildIsolatedJs();
 concatCss();
-packZip();
+packZipAndCrx();
 console.log('Done. Reload the extension in chrome://extensions to apply.');
