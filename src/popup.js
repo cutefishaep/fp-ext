@@ -105,31 +105,21 @@
 
     if (res.status === 'update_available') {
       statusTitle.textContent = `Update available: v${res.latestVersion}`;
-      statusDesc.textContent = 'SHA-256 verified. Downloading update package...';
-      if (res.downloadUrl) {
-        chrome.runtime.sendMessage({
-          type: 'DOWNLOAD_VERIFIED_ZIP',
-          url: res.downloadUrl,
-          filename: res.zipName
-        }, (dlRes) => {
-          if (dlRes?.ok) {
-            statusDesc.textContent = `Downloaded ${res.zipName || 'update ZIP'}. Extract it and reload in chrome://extensions.`;
-          } else {
-            statusDesc.textContent = 'Verified. Click Download Update to save the ZIP package.';
-          }
-        });
-      }
+      statusDesc.textContent = `Version v${res.latestVersion} is ready (SHA-256 verified). Click Download Update to save the ZIP package.`;
       if (res.packageSha256) {
         shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.packageSha256}`;
         shaBox.classList.remove('hidden');
       }
-      addButton('Download Again', 'm3-btn-secondary', () => {
-        if (res.downloadUrl) {
-          chrome.runtime.sendMessage({ type: 'DOWNLOAD_VERIFIED_ZIP', url: res.downloadUrl, filename: res.zipName });
-        }
-      });
-      addButton('Open TikTok Studio', 'm3-btn-primary', () => {
+      addButton('Open TikTok Studio', 'm3-btn-secondary', () => {
         chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: false }, openStudio);
+      });
+      addButton('Download Update', 'm3-btn-primary', () => {
+        if (!res.downloadUrl) return;
+        chrome.runtime.sendMessage({ type: 'DOWNLOAD_VERIFIED_ZIP', url: res.downloadUrl, filename: res.zipName }, (dlRes) => {
+          if (dlRes?.ok) {
+            statusDesc.textContent = `Downloaded ${res.zipName || 'update ZIP'}. Extract it and reload in chrome://extensions.`;
+          }
+        });
       });
       return;
     }
