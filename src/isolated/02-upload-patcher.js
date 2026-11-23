@@ -643,30 +643,30 @@
       let workingFile = file;
 
       if (doCompress) {
-        log('Compressing video via FFmpeg WASM:', file.name);
+        log('Compressing video:', file.name);
         const maxCompressPct = doBypass ? 82 : 98;
-        setProgress(2, 'Preparing FFmpeg WASM...');
+        setProgress(2, 'Preparing...');
         const compRes = await compressVideoViaOffscreen(workingFile, (prog) => {
           if (prog.stage === 'wasm') {
             const p = 2 + Math.round((prog.percent / 100) * 20);
-            setProgress(p, prog.detail || 'Downloading FFmpeg WASM...');
+            setProgress(p, prog.detail || 'Downloading...');
           } else if (prog.stage === 'compress') {
             const p = 22 + Math.round((prog.percent / 100) * (maxCompressPct - 22));
-            setProgress(p, prog.detail || 'Compressing (veryfast)...');
+            setProgress(p, 'Compressing...');
           }
         });
         workingFile = compRes.file;
         log(
           compRes.skippedLarger
-            ? `✓ Compression skipped (already optimal ${(compRes.origSize / 1048576).toFixed(2)} MB)`
+            ? `✓ Compression skipped (${(compRes.origSize / 1048576).toFixed(2)} MB)`
             : `✓ Compressed ${(compRes.origSize / 1048576).toFixed(2)} MB -> ${(compRes.outSize / 1048576).toFixed(2)} MB`
         );
       }
 
       if (doBypass) {
-        log('Calibrating video inside extension:', workingFile.name);
+        log('Processing video:', workingFile.name);
         const startPct = doCompress ? 82 : 10;
-        setProgress(startPct, doCompress ? 'Calibrating 1:1 bypass...' : '');
+        setProgress(startPct, doCompress ? 'Processing...' : '');
         const patchPromise = calibrateVideoFile(workingFile);
         await Promise.all([patchPromise, animateProgress(startPct, 95, 280)]);
         workingFile = await patchPromise;

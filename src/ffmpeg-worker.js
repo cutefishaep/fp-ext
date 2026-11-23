@@ -36,7 +36,7 @@ const getVerifiedWasmBinary = async (emitProgress) => {
   let lastErr = null;
   for (const url of WASM_URLS) {
     try {
-      emitProgress('wasm', 0, 'Downloading FFmpeg WASM...');
+      emitProgress('wasm', 0, 'Downloading FFmpeg...');
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -72,7 +72,7 @@ const getVerifiedWasmBinary = async (emitProgress) => {
         buf = await res.arrayBuffer();
       }
 
-      emitProgress('wasm', 100, 'Verifying FFmpeg WASM SHA-256...');
+      emitProgress('wasm', 100, 'Verifying...');
       const hash = await sha256Hex(buf);
       if (hash !== WASM_EXPECTED_SHA256) {
         throw new Error(`FFmpeg WASM SHA-256 mismatch (${hash.slice(0, 12)}...)`);
@@ -121,7 +121,7 @@ self.onmessage = async (e) => {
       if (now - lastProgressAt < 100) return;
       lastProgressAt = now;
       const pct = Math.max(0, Math.min(99, Math.round((progress || 0) * 100)));
-      emitProgress('compress', pct, `Compressing (veryfast)... ${pct}%`);
+      emitProgress('compress', pct, 'Compressing...');
     });
 
     const baseArgs = [

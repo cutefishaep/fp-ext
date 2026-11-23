@@ -110,17 +110,60 @@ div[class*="mention-list-popover"] {
   overflow-y: auto !important;
 }
 
-/* Inner content di dalam Dropdown Menu: Hapus border ganda / shadow */
+/* Inner content, footer & wrapper di dalam Dropdown Menu (termasuk Add to playlist):
+   Hapus background putih bawaan TikTok & border/shadow ganda */
+.Select__menu .Select__content,
+.Select__contentWrapper .Select__content,
+div[class*="Select__menu"] div[class*="Select__content"],
+div[class*="Select__contentWrapper"] div[class*="Select__content"],
+.Select__menu div:not(.Select__item):not([role="option"]):not([role="button"]),
+.Select__contentWrapper div:not(.Select__item):not([role="option"]):not([role="button"]),
+div[class*="Select__menu"] div:not(.Select__item):not([role="option"]):not([role="button"]),
+div[class*="Select__contentWrapper"] div:not(.Select__item):not([role="option"]):not([role="button"]),
+[role="listbox"] div:not([role="option"]):not([role="button"]),
+.Dropdown__menu div:not([role="option"]):not([role="button"]),
+.Dropdown__content div:not([role="option"]):not([role="button"]) {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
 .Select__menu .Select__content,
 .Select__contentWrapper .Select__content,
 div[class*="Select__menu"] div[class*="Select__content"],
 div[class*="Select__contentWrapper"] div[class*="Select__content"] {
-  background: transparent !important;
-  background-color: transparent !important;
   border: none !important;
   border-radius: 0 !important;
-  box-shadow: none !important;
   padding: 0 !important;
+}
+
+/* Footer / sticky bar di dalam dropdown (mis. wrapper "+ New playlist") menyatu dengan surface gelap */
+.Select__menu div[class*="footer"],
+.Select__contentWrapper div[class*="footer"],
+.Select__menu div[class*="playlist"],
+.Select__contentWrapper div[class*="playlist"] {
+  background-color: var(--m3-surface-container) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Tombol footer di dalam dropdown (mis. "+ New playlist") */
+.Select__menu button,
+.Select__contentWrapper button,
+div[class*="Select__menu"] button,
+div[class*="Select__contentWrapper"] button {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-primary) !important;
+  border-radius: 9999px !important;
+}
+
+.Select__menu button:hover,
+.Select__contentWrapper button:hover,
+div[class*="Select__menu"] button:hover,
+div[class*="Select__contentWrapper"] button:hover {
+  background-color: var(--m3-surface-container-highest) !important;
+  border-color: var(--m3-primary) !important;
 }
 
 /* Items in Location & Select Dropdown */
