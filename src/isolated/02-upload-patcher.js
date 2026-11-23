@@ -393,6 +393,7 @@
           <p class="m3-bypass-desc">
             Compress video locally before upload. First run downloads ~31 MB FFmpeg WASM.
           </p>
+          <p class="m3-compress-limit-note" id="m3-compress-limit-note" style="display: none;"></p>
         </div>
       </div>
     `;
@@ -452,6 +453,10 @@
 
     if (compressToggle) {
       compressToggle.addEventListener('change', (e) => {
+        if (_compressLocked) {
+          e.target.checked = true;
+          return;
+        }
         setCompressVideoEnabled(e.target.checked);
       });
     }
@@ -492,6 +497,110 @@
   let _activePatching = false;
   let _isHandingOver = false;
   let _proxyFileInput = null;
+  let _compressLocked = false;
+
+  const setCompressLimitLock = (locked, reasonText = '') => {
+    _compressLocked = Boolean(locked);
+    const toggle = document.getElementById('m3-compress-toggle');
+    const switchLabel = toggle?.closest('.m3-switch');
+    const noteEl = document.getElementById('m3-compress-limit-note');
+
+    if (toggle) {
+      if (_compressLocked) {
+        toggle.checked = true;
+        toggle.disabled = true;
+        setCompressVideoEnabled(true);
+      } else {
+        toggle.disabled = false;
+      }
+    }
+    if (switchLabel) {
+      switchLabel.classList.toggle('is-locked', _compressLocked);
+    }
+    if (noteEl) {
+      if (_compressLocked && reasonText) {
+        noteEl.textContent = reasonText;
+        noteEl.style.display = '';
+      } else {
+        noteEl.textContent = '';
+        noteEl.style.display = 'none';
+      }
+    }
+  };
+
+  const parseFpsFromBytes = (u8) => {
+    if (!u8 || u8.length < 32) return 0;
+    const view = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+    let timescale = 0;
+    let sampleDelta = 0;
+    for (let i = 0; i < u8.length - 8; i++) {
+      if (u8[i] === 0x76 && u8[i + 1] === 0x69 && u8[i + 2] === 0x64 && u8[i + 3] === 0x65) {
+        const start = Math.max(0, i - 300);
+        const end = Math.min(u8.length - 8, i + 8000);
+        for (let j = start; j < end; j++) {
+          if (u8[j] === 0x6d && u8[j + 1] === 0x64 && u8[j + 2] === 0x68 && u8[j + 3] === 0x64) {
+            const ver = u8[j + 4];
+            timescale = ver === 1 ? view.getUint32(j + 24) : view.getUint32(j + 16);
+          } else if (u8[j] === 0x73 && u8[j + 1] === 0x74 && u8[j + 2] === 0x74 && u8[j + 3] === 0x73) {
+            const cnt = view.getUint32(j + 8);
+            if (cnt > 0) sampleDelta = view.getUint32(j + 16);
+          }
+          if (timescale > 0 && sampleDelta > 0) {
+            const fps = Math.round(timescale / sampleDelta);
+            if (fps > 0 && fps <= 240) return fps;
+          }
+        }
+      }
+    }
+    return 0;
+  };
+
+  const inspectVideoLimits = async (file) => {
+    const meta = await new Promise((resolve) => {
+      const v = document.createElement('video');
+      v.preload = 'metadata';
+      const url = URL.createObjectURL(file);
+      const done = (res) => {
+        try { URL.revokeObjectURL(url); } catch (_) {}
+        resolve(res);
+      };
+      v.onloadedmetadata = () => done({
+        width: v.videoWidth || 0,
+        height: v.videoHeight || 0,
+        duration: Number.isFinite(v.duration) ? v.duration : 0
+      });
+      v.onerror = () => done({ width: 0, height: 0, duration: 0 });
+      v.src = url;
+    });
+
+    let fps = 0;
+    try {
+      const headSize = Math.min(file.size, 1024 * 1024);
+      const headBuf = new Uint8Array(await file.slice(0, headSize).arrayBuffer());
+      fps = parseFpsFromBytes(headBuf);
+      if (!fps && file.size > headSize) {
+        const tailStart = Math.max(0, file.size - 1024 * 1024);
+        const tailBuf = new Uint8Array(await file.slice(tailStart).arrayBuffer());
+        fps = parseFpsFromBytes(tailBuf);
+      }
+    } catch (_) {}
+
+    const shortSide = Math.min(meta.width, meta.height);
+    const bitrateMbps = meta.duration > 0 ? (file.size * 8) / (meta.duration * 1000000) : 0;
+    const exceeded = [];
+    if (shortSide > 1080) exceeded.push(`${meta.width}x${meta.height} (>1080p)`);
+    if (fps > 60) exceeded.push(`${fps} FPS (>60 FPS)`);
+    if (bitrateMbps > 50) exceeded.push(`${bitrateMbps.toFixed(1)} Mbps (>50 Mbps)`);
+
+    return {
+      width: meta.width,
+      height: meta.height,
+      fps,
+      bitrateMbps,
+      exceedsLimit: exceeded.length > 0,
+      reasons: exceeded
+    };
+  };
 
   const getProxyFileInput = () => {
     if (!_proxyFileInput || !document.body.contains(_proxyFileInput)) {
@@ -711,7 +820,17 @@
     };
 
     try {
-      const doCompress = isCompressVideoEnabled();
+      const limits = await inspectVideoLimits(file);
+      if (limits.exceedsLimit) {
+        setCompressLimitLock(
+          true,
+          `Video melebihi batas (maks 1080p, 60 FPS, 50 Mbps): ${limits.reasons.join(', ')}. Compress Video diaktifkan otomatis dan tidak dapat dimatikan.`
+        );
+      } else {
+        setCompressLimitLock(false);
+      }
+
+      const doCompress = limits.exceedsLimit || isCompressVideoEnabled();
       const doBypass = isBypassUploadEnabled();
       let workingFile = file;
 
