@@ -1,8 +1,4 @@
 {
-  "coreVersion": "0.5.1",
-  "bypassStatus": "WORKING",
-  "inReviewNotice": {
-    "mainText": "Video is on review or if it's been like this for 3 minutes, it got patched",
-    "subText": "Just delete this video"
-  }
+  "coreVersion": "0.5.2",
+  "bypassStatus": "WORKING"
 }

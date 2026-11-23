@@ -18,12 +18,6 @@
     if (root && root.dataset) {
       root.dataset.fishBypassEnabled = _bypassEnabled ? 'true' : 'false';
       root.dataset.fishBypassWatermark = _bypassWatermark;
-      if (_liveConfig?.inReviewNotice?.mainText) {
-        root.dataset.fishReviewMain = String(_liveConfig.inReviewNotice.mainText);
-      }
-      if (_liveConfig?.inReviewNotice?.subText) {
-        root.dataset.fishReviewSub = String(_liveConfig.inReviewNotice.subText);
-      }
     }
     try {
       window.postMessage({
