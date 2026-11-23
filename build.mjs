@@ -342,10 +342,58 @@ function packZipAndCrx() {
   console.log(`✓ build/${crxName.padEnd(30)} CRX3      (${crxKb} KB, key: ${source})`);
 }
 
+function packCanaryMv2() {
+  const outDir = join(root, 'build');
+  mkdirSync(outDir, { recursive: true });
+
+  const canaryBg = readTextLf(join(root, 'canary/background.js'));
+  const canaryBridge = readTextLf(join(root, 'canary/main-bridge.js'));
+  checkJsSyntax(canaryBg, 'canary/background.js');
+  checkJsSyntax(canaryBridge, 'canary/main-bridge.js');
+
+  const manifest = JSON.parse(readTextLf(join(root, 'canary/manifest.json')));
+  const sharedFiles = [
+    'core-version.json',
+    'core-config.json',
+    'boot-dark.css',
+    'content.js',
+    'isolated.js',
+    'content.css',
+    'ui-m3.css',
+    'popup.html',
+    'popup.js',
+    'updater.html',
+    'updater.js',
+    'ffmpeg-worker.js',
+    'vendor/ffmpeg-core.js'
+  ];
+
+  const files = [
+    { name: 'manifest.json', data: Buffer.from(readTextLf(join(root, 'canary/manifest.json')), 'utf8') },
+    { name: 'background.js', data: Buffer.from(canaryBg, 'utf8') },
+    { name: 'main-bridge.js', data: Buffer.from(canaryBridge, 'utf8') },
+    ...sharedFiles.map((name) => ({
+      name,
+      data: Buffer.from(readTextLf(join(root, 'src', name)), 'utf8')
+    }))
+  ];
+
+  const iconFiles = new Set(Object.values(manifest.icons || {}));
+  for (const iconPath of iconFiles) {
+    files.push({ name: iconPath, data: readFileSync(join(root, 'src', iconPath)) });
+  }
+
+  const canaryZip = createZip(files);
+  writeFileSync(join(outDir, 'canary-mv2.zip'), canaryZip);
+  const kb = (files.reduce((n, f) => n + f.data.length, 0) / 1024).toFixed(0);
+  console.log(`✓ build/${'canary-mv2.zip'.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB uncompressed)`);
+}
+
 console.log('Building Fish Acceleration...');
 checkJsSyntax(readFileSync(join(root, 'src/background.js'), 'utf8'), 'src/background.js');
 buildContentJs();
 buildIsolatedJs();
 concatCss();
 packZipAndCrx();
+packCanaryMv2();
 console.log('Done. Reload the extension in chrome://extensions to apply.');
