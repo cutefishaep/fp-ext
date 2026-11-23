@@ -436,20 +436,19 @@
 
 .m3-watermark-input {
   flex: 1 1 auto !important;
-  background: #111512 !important;
-  border: 1px solid rgba(163, 219, 167, 0.3) !important;
-  border-radius: 8px !important;
-  color: #a3dba7 !important;
+  background: var(--m3-surface-container-high, #242c26) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  color: var(--m3-text-primary, #f2f7f2) !important;
   font-size: 13px !important;
-  padding: 6px 12px !important;
+  padding: 10px 14px !important;
   outline: none !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+  transition: box-shadow 0.18s ease !important;
   box-sizing: border-box !important;
 }
 
 .m3-watermark-input:focus {
-  border-color: #a3dba7 !important;
-  box-shadow: 0 0 10px rgba(163, 219, 167, 0.3) !important;
+  box-shadow: inset 0 0 0 1.5px var(--m3-primary, #a3dba7) !important;
 }
 
 .m3-field {
@@ -460,10 +459,10 @@
 }
 
 .m3-field-label {
-  font-size: 12px !important;
+  font-size: 13px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.02em !important;
-  color: #b7c4b9 !important;
+  letter-spacing: 0 !important;
+  color: var(--m3-text-primary, #f2f7f2) !important;
 }
 
 .m3-method-switch {
@@ -473,9 +472,9 @@
   align-items: center !important;
   gap: 4px !important;
   padding: 4px !important;
-  background: #111512 !important;
+  background: var(--m3-surface-container-high, #242c26) !important;
   border-radius: 999px !important;
-  border: 1px solid rgba(163, 219, 167, 0.22) !important;
+  border: none !important;
 }
 
 .m3-method-pill {
@@ -483,23 +482,28 @@
   border: none !important;
   outline: none !important;
   background: transparent !important;
-  color: #9ea7a0 !important;
+  color: var(--m3-text-primary, #f2f7f2) !important;
   border-radius: 999px !important;
-  padding: 7px 10px !important;
-  font-size: 12px !important;
+  padding: 9px 12px !important;
+  font-size: 13px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
   text-align: center !important;
-  transition: background-color 0.18s, color 0.18s !important;
+  transition: background-color 180ms cubic-bezier(0.2, 0, 0, 1), color 180ms cubic-bezier(0.2, 0, 0, 1), transform 120ms ease !important;
 }
 
-.m3-method-pill:hover:not(:disabled) {
-  color: #f2f7f2 !important;
+.m3-method-pill:hover:not(.is-active):not(:disabled) {
+  background: rgba(163, 219, 167, 0.1) !important;
+  color: var(--m3-text-primary, #f2f7f2) !important;
+}
+
+.m3-method-pill:active:not(:disabled) {
+  transform: scale(0.97) !important;
 }
 
 .m3-method-pill.is-active {
-  background: rgba(163, 219, 167, 0.22) !important;
-  color: #a3dba7 !important;
+  background: var(--m3-primary, #a3dba7) !important;
+  color: var(--m3-on-primary, #053311) !important;
 }
 
 .m3-method-pill:disabled {

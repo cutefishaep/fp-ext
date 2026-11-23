@@ -827,8 +827,8 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   }
 
   const rawCandidates = [
-    tikwmData?.hdplay,
     tikwmData?.play,
+    tikwmData?.hdplay,
     tikwmData?.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null,
     streamUrl
   ];
@@ -840,8 +840,9 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   }
 
   let resolvedStreamUrl = candidates[0] || null;
-  let totalSizeBytes = tikwmData?.size || 0;
+  let totalSizeBytes = tikwmData?.size || tikwmData?.hd_size || 0;
   let atomMeta = null;
+  let bestComment = '';
 
   for (const candUrl of candidates) {
     try {
@@ -849,6 +850,9 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
       const probeRes = await fetchWithTimeout(fpsApiUrl, {}, 20000);
       if (probeRes.ok) {
         const meta = await probeRes.json();
+        if (meta && meta.comment && !bestComment) {
+          bestComment = meta.comment;
+        }
         if (meta && (meta.width || meta.fps || meta.size)) {
           resolvedStreamUrl = candUrl;
           if (meta.size > 0) totalSizeBytes = meta.size;
@@ -856,7 +860,7 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
             fps: meta.fps || 0,
             width: meta.width || 0,
             height: meta.height || 0,
-            comment: meta.comment || '',
+            comment: meta.comment || bestComment || '',
             duration: meta.duration || 0
           };
           if (atomMeta.width && atomMeta.fps) {

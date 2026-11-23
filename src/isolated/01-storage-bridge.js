@@ -161,11 +161,12 @@
     }
   };
 
-  const probeVideoDirect = async ({ pageUrl, streamUrl }) => {
+  const probeVideoDirect = async ({ pageUrl, streamUrl }, onStage = null) => {
     let tikwmData = null;
 
     if (pageUrl && typeof pageUrl === 'string' && pageUrl.startsWith('https://www.tiktok.com/')) {
       const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}&hd=1`;
+      onStage?.({ stage: 'metadata_start', pct: 20, status: 'Fetching video metadata...' });
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           const twRes = await probeFetchWithTimeout(apiUrl, {}, 30000);
@@ -176,6 +177,7 @@
               break;
             }
             if (twJson && twJson.code === -1 && attempt === 0) {
+              onStage?.({ stage: 'metadata_retry', pct: 35, status: 'Retrying metadata request...' });
               await new Promise((r) => setTimeout(r, 1150));
               continue;
             }
@@ -183,6 +185,7 @@
           break;
         } catch (_) {
           if (attempt === 0) {
+            onStage?.({ stage: 'metadata_retry', pct: 35, status: 'Retrying metadata request...' });
             await new Promise((r) => setTimeout(r, 1150));
           }
         }
@@ -190,8 +193,8 @@
     }
 
     const rawCandidates = [
-      tikwmData?.hdplay,
       tikwmData?.play,
+      tikwmData?.hdplay,
       tikwmData?.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null,
       streamUrl
     ];
@@ -202,9 +205,18 @@
       }
     }
 
+    onStage?.({
+      stage: 'metadata_ready',
+      pct: 65,
+      status: 'Probing video stream (FPS & resolution)...',
+      tikwmData,
+      streamUrl: candidates[0] || null
+    });
+
     let resolvedStreamUrl = candidates[0] || null;
-    let totalSizeBytes = tikwmData?.size || 0;
+    let totalSizeBytes = tikwmData?.size || tikwmData?.hd_size || 0;
     let atomMeta = null;
+    let bestComment = '';
 
     for (const candUrl of candidates) {
       try {
@@ -212,6 +224,9 @@
         const probeRes = await probeFetchWithTimeout(fpsApiUrl, {}, 20000);
         if (probeRes.ok) {
           const meta = await probeRes.json();
+          if (meta && meta.comment && !bestComment) {
+            bestComment = meta.comment;
+          }
           if (meta && (meta.width || meta.fps || meta.size)) {
             resolvedStreamUrl = candUrl;
             if (meta.size > 0) totalSizeBytes = meta.size;
@@ -219,7 +234,7 @@
               fps: meta.fps || 0,
               width: meta.width || 0,
               height: meta.height || 0,
-              comment: meta.comment || '',
+              comment: meta.comment || bestComment || '',
               duration: meta.duration || 0
             };
             if (atomMeta.width && atomMeta.fps) {
@@ -255,12 +270,23 @@
       } catch (_) {}
     };
 
+    const emitStage = (stagePayload) => {
+      try {
+        window.postMessage({
+          source: 'fish-acc-isolated',
+          type: 'FISH_PROBE_STAGE',
+          reqId: msg.reqId,
+          payload: stagePayload || null
+        }, window.location.origin);
+      } catch (_) {}
+    };
+
     const req = {
       pageUrl: msg.pageUrl || null,
       streamUrl: msg.streamUrl || null
     };
 
-    probeVideoDirect(req)
+    probeVideoDirect(req, emitStage)
       .then(async (direct) => {
         if (direct && (direct.tikwmData || (direct.atomMeta && direct.atomMeta.width))) {
           reply(direct);

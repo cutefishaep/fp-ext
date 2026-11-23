@@ -21,11 +21,16 @@
         _bypassEnabled = Boolean(msg.enabled);
         _bypassWatermark = typeof msg.watermark === 'string' ? msg.watermark : DEFAULT_WATERMARK;
         warmMentionWatermark(_bypassWatermark);
+      } else if (msg.type === 'FISH_PROBE_STAGE' && msg.reqId !== undefined) {
+        const entry = _pendingProbes.get(msg.reqId);
+        if (entry && typeof entry.onStage === 'function') {
+          try { entry.onStage(msg.payload || null); } catch (_) {}
+        }
       } else if (msg.type === 'FISH_PROBE_RESULT' && msg.reqId !== undefined) {
-        const resolver = _pendingProbes.get(msg.reqId);
-        if (resolver) {
+        const entry = _pendingProbes.get(msg.reqId);
+        if (entry) {
           _pendingProbes.delete(msg.reqId);
-          resolver(msg.payload || null);
+          entry.resolve(msg.payload || null);
         }
       }
     });
@@ -34,7 +39,7 @@
     warmMentionWatermark(_bypassWatermark);
 
     // Minta isolated.js -> background.js melakukan probe TikWM & CDN stream (bebas CSP & CORS)
-    const probeVideoViaExtension = (pageUrl, streamUrl) => {
+    const probeVideoViaExtension = (pageUrl, streamUrl, onStage = null) => {
       return new Promise((resolve) => {
         const reqId = ++_probeSeq;
         const timer = setTimeout(() => {
@@ -42,9 +47,12 @@
           resolve(null);
         }, 60000);
 
-        _pendingProbes.set(reqId, (result) => {
-          clearTimeout(timer);
-          resolve(result);
+        _pendingProbes.set(reqId, {
+          resolve: (result) => {
+            clearTimeout(timer);
+            resolve(result);
+          },
+          onStage
         });
 
         window.postMessage({

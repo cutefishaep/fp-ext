@@ -237,6 +237,16 @@
       return false;
     };
 
+    const cleanMethodTag = (comment) => {
+      if (!comment || typeof comment !== 'string') return 'Undetected';
+      const s = comment.trim().replace(/^["']|["']$/g, '').trim();
+      if (!s || s === '-' || s === '\u2014') return 'Undetected';
+      if (s.charAt(0) === '{') return 'Undetected';
+      if (/^(lavf|lavc|ffmpeg|handbrake|libav|x264|x265|vid:|v\d{4,}|isom|mp42|dash|iso2|qt|avc1|mp41)/i.test(s)) return 'Undetected';
+      if (/^\d+$/.test(s) || !/[a-zA-Z]/.test(s)) return 'Undetected';
+      return s;
+    };
+
     const COUNTRY_NAMES_ID = {
       'ID': 'Indonesia', 'MY': 'Malaysia', 'SG': 'Singapura', 'US': 'Amerika Serikat',
       'TH': 'Thailand', 'VN': 'Vietnam', 'PH': 'Filipina', 'JP': 'Jepang',
@@ -322,7 +332,7 @@
             </div>
           </div>
 
-          <div class="fish-qm-media-card">
+          <div class="fish-qm-media-card" id="fish-qm-media-card" style="display:none;">
             <img class="fish-qm-media-thumb" id="fish-qm-media-cover" alt="Cover video" ${initialCover ? `src="${escapeHTML(initialCover)}"` : 'style="display:none;"'}>
             <div class="fish-qm-media-body">
               <div class="fish-qm-media-title" id="fish-qm-media-author">${escapeHTML(initialNickname)}</div>
@@ -331,7 +341,7 @@
             </div>
           </div>
 
-          <div class="fish-qm-detail-card">
+          <div class="fish-qm-detail-card" id="fish-qm-detail-card" style="display:none;">
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Views</span>
               <span class="fish-qm-detail-val is-highlight" id="fish-qm-kv-views">${escapeHTML(displayViews)}</span>
@@ -361,42 +371,42 @@
 
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/></svg>Resolution</span>
-              <span class="fish-qm-detail-val" id="fish-qm-res"><span class="fish-qm-shimmer">Probing...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-res">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.28-10.43zM10.59 15.41a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg>FPS</span>
-              <span class="fish-qm-detail-val" id="fish-qm-fps"><span class="fish-qm-shimmer">Measuring...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-fps">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z"/></svg>Bitrate</span>
-              <span class="fish-qm-detail-val" id="fish-qm-bitrate"><span class="fish-qm-shimmer">Calculating...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-bitrate">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Duration</span>
-              <span class="fish-qm-detail-val" id="fish-qm-duration"><span class="fish-qm-shimmer">Checking...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-duration">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Size</span>
-              <span class="fish-qm-detail-val" id="fish-qm-size"><span class="fish-qm-shimmer">Fetching...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-size">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>Method</span>
-              <span class="fish-qm-detail-val" id="fish-qm-method"><span class="fish-qm-shimmer">Probing...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-method">-</span>
             </div>
 
             <hr class="fish-qm-detail-divider">
 
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Status</span>
-              <span class="fish-qm-detail-val is-highlight" id="fish-qm-shadowban"><span class="fish-qm-shimmer">Checking...</span></span>
+              <span class="fish-qm-detail-val is-highlight" id="fish-qm-shadowban">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>Region</span>
-              <span class="fish-qm-detail-val" id="fish-qm-region"><span class="fish-qm-shimmer">Detecting...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-region">-</span>
             </div>
             <div class="fish-qm-detail-row">
               <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>Upload Date</span>
-              <span class="fish-qm-detail-val" id="fish-qm-date"><span class="fish-qm-shimmer">Checking...</span></span>
+              <span class="fish-qm-detail-val" id="fish-qm-date">-</span>
             </div>
           </div>
 
@@ -409,7 +419,16 @@
 
       document.body.appendChild(overlay);
 
+      let progressTimer = null;
+      let currentPct = 15;
+      let targetCeiling = 55;
+      let metadataRendered = false;
+
       const closeModal = () => {
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
         overlay.remove();
         document.removeEventListener('keydown', handleEsc);
         checkModals();
@@ -436,11 +455,75 @@
         const pctEl = overlay.querySelector('#fish-qm-progress-pct');
         if (fill) fill.style.width = `${pct}%`;
         if (pctEl) pctEl.textContent = `${pct}%`;
-        if (textEl) textEl.textContent = text;
+        if (textEl && text) textEl.textContent = text;
       };
 
-      // Step 1: Resolve stream URL & probe MP4 atoms via extension background worker (CSP & CORS safe)
-      updateProgress(25, 'Resolving CDN media stream URL & metadata...');
+      const renderMetadata = (twData) => {
+        metadataRendered = true;
+        const mediaCardEl = overlay.querySelector('#fish-qm-media-card');
+        const detailCardEl = overlay.querySelector('#fish-qm-detail-card');
+        if (mediaCardEl) mediaCardEl.style.display = '';
+        if (detailCardEl) detailCardEl.style.display = '';
+
+        const mediaCoverEl = overlay.querySelector('#fish-qm-media-cover');
+        const mediaAuthorEl = overlay.querySelector('#fish-qm-media-author');
+        const mediaHandleEl = overlay.querySelector('#fish-qm-media-handle');
+        const mediaCaptionEl = overlay.querySelector('#fish-qm-media-caption');
+        if (mediaCoverEl && twData?.cover) {
+          mediaCoverEl.src = twData.cover;
+          mediaCoverEl.style.display = 'block';
+        }
+        if (mediaAuthorEl && twData?.author?.nickname) {
+          mediaAuthorEl.textContent = twData.author.nickname;
+        }
+        if (mediaHandleEl && twData?.author?.unique_id) {
+          mediaHandleEl.textContent = `@${twData.author.unique_id}`;
+        }
+        if (mediaCaptionEl && twData?.title) {
+          mediaCaptionEl.textContent = twData.title;
+        }
+
+        const vCount = twData?.play_count ?? itemData?.stats?.play_count;
+        const lCount = twData?.digg_count ?? itemData?.stats?.digg_count;
+        const cCount = twData?.comment_count ?? itemData?.stats?.comment_count;
+        const sCount = twData?.share_count ?? itemData?.stats?.share_count;
+        const svCount = twData?.collect_count ?? itemData?.stats?.collect_count;
+
+        const kvViews = overlay.querySelector('#fish-qm-kv-views');
+        const kvLikes = overlay.querySelector('#fish-qm-kv-likes');
+        const kvComments = overlay.querySelector('#fish-qm-kv-comments');
+        const kvShares = overlay.querySelector('#fish-qm-kv-shares');
+        const kvSaves = overlay.querySelector('#fish-qm-kv-saves');
+        const kvEng = overlay.querySelector('#fish-qm-kv-engagement');
+
+        if (kvViews && vCount !== undefined && vCount !== null) kvViews.textContent = formatStatNum(vCount);
+        if (kvLikes && lCount !== undefined && lCount !== null) kvLikes.textContent = formatStatNum(lCount);
+        if (kvComments && cCount !== undefined && cCount !== null) kvComments.textContent = formatStatNum(cCount);
+        if (kvShares && sCount !== undefined && sCount !== null) kvShares.textContent = formatStatNum(sCount);
+        if (kvSaves && svCount !== undefined && svCount !== null) kvSaves.textContent = formatStatNum(svCount);
+
+        if (kvEng && vCount && Number(vCount) > 0 && lCount !== undefined && lCount !== null) {
+          const totalInteractions = Number(lCount) + Number(cCount || 0) + Number(sCount || 0) + Number(svCount || 0);
+          kvEng.textContent = ((totalInteractions / Number(vCount)) * 100).toFixed(2) + '%';
+        }
+
+        const regionEl = overlay.querySelector('#fish-qm-region');
+        const rawRegion = twData?.region || itemData?.region || itemData?.video?.region;
+        if (regionEl) regionEl.textContent = rawRegion ? formatRegion(rawRegion) : '—';
+
+        const dateEl = overlay.querySelector('#fish-qm-date');
+        const rawEpoch = twData?.create_time || itemData?.create_time || itemData?.createTime;
+        if (dateEl) dateEl.textContent = rawEpoch ? formatUploadDate(rawEpoch) : '—';
+
+        const shadowbanEl = overlay.querySelector('#fish-qm-shadowban');
+        if (shadowbanEl) {
+          const isRestricted = !!(twData?.is_nff_or_nr || itemData?.is_nff_or_nr || itemData?.status === 2 || itemData?.review_status === 2);
+          shadowbanEl.classList.toggle('is-highlight', !isRestricted);
+          shadowbanEl.classList.toggle('is-warn', isRestricted);
+          shadowbanEl.textContent = isRestricted ? 'Shadow Banned' : 'Safe';
+        }
+      };
+
       let streamUrl = null;
       if (itemData?.video?.play_addr?.url_list?.length) {
         streamUrl = itemData.video.play_addr.url_list[0];
@@ -448,8 +531,37 @@
         streamUrl = itemData.video.download_addr.url_list[0];
       }
 
-      updateProgress(55, 'Probing MP4 stream & atom headers via extension...');
-      const probeResult = await probeVideoViaExtension(pageUrl, streamUrl);
+      updateProgress(15, 'Fetching video metadata...');
+      progressTimer = setInterval(() => {
+        if (currentPct < targetCeiling) {
+          currentPct = Math.min(targetCeiling, currentPct + 2);
+          updateProgress(currentPct);
+        }
+      }, 450);
+
+      let probeResult = null;
+      try {
+        probeResult = await probeVideoViaExtension(pageUrl, streamUrl, (st) => {
+          if (!st) return;
+          if (st.stage === 'metadata_retry') {
+            currentPct = Math.max(currentPct, 35);
+            updateProgress(currentPct, st.status || 'Retrying metadata request...');
+          } else if (st.stage === 'metadata_ready') {
+            currentPct = Math.max(currentPct, 65);
+            targetCeiling = 92;
+            updateProgress(currentPct, st.status || 'Probing video stream (FPS & resolution)...');
+            if (st.tikwmData) {
+              renderMetadata(st.tikwmData);
+            }
+          }
+        });
+      } finally {
+        if (progressTimer) {
+          clearInterval(progressTimer);
+          progressTimer = null;
+        }
+      }
+
       if (probeResult?.error === 'EXTENSION_CONTEXT_INVALIDATED') {
         log('Extension was reloaded — refresh this tab to reconnect stream probe');
       }
@@ -458,13 +570,15 @@
         streamUrl = probeResult.streamUrl;
       }
 
-      const totalSizeBytes = probeResult?.totalSizeBytes || tikwmData?.size || itemData?.video?.size || 0;
+      if (!metadataRendered || tikwmData) {
+        renderMetadata(tikwmData);
+      }
+
+      const totalSizeBytes = probeResult?.totalSizeBytes || tikwmData?.size || tikwmData?.hd_size || itemData?.video?.size || 0;
       const atomMeta = probeResult?.atomMeta || null;
       log(`Probe result (${pageUrl || 'no-url'}): tikwm=${Boolean(tikwmData)}, meta=${atomMeta ? `${atomMeta.width}x${atomMeta.height}@${atomMeta.fps}fps (${totalSizeBytes}B)` : 'none'}`);
-      updateProgress(85, 'Decoding timescale, framerate & atom metadata...');
-
-      updateProgress(100, 'Quality & Ingest Analysis Complete!');
-      await new Promise(r => setTimeout(r, 350));
+      updateProgress(100, 'Analysis complete');
+      await new Promise(r => setTimeout(r, 250));
 
       const progressBox = overlay.querySelector('#fish-qm-progress-box');
       if (progressBox) {
@@ -559,12 +673,7 @@
 
       // Patcher Method
       if (methodEl) {
-        let cleanComment = (atomMeta?.comment || '').trim();
-        if ((cleanComment.startsWith('"') && cleanComment.endsWith('"')) || (cleanComment.startsWith("'") && cleanComment.endsWith("'"))) {
-          cleanComment = cleanComment.slice(1, -1).trim();
-        }
-
-        const methodText = (!cleanComment || isUndetectedMethodStr(cleanComment)) ? 'Undetected' : cleanComment;
+        const methodText = cleanMethodTag(atomMeta?.comment);
         methodEl.textContent = methodText;
         methodEl.title = methodText;
       }

@@ -394,8 +394,8 @@
           </div>
         </div>
         <div class="m3-field" id="m3-compress-field">
-          <span class="m3-field-label">Compress Video</span>
-          <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compress Video">
+          <span class="m3-field-label">Compression</span>
+          <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compression">
             <button type="button" class="m3-method-pill ${curCompressMode === 'off' ? 'is-active' : ''}" data-compress-mode="off" id="m3-compress-off-btn" role="radio" aria-checked="${curCompressMode === 'off' ? 'true' : 'false'}">OFF</button>
             <button type="button" class="m3-method-pill ${curCompressMode === '720p' ? 'is-active' : ''}" data-compress-mode="720p" role="radio" aria-checked="${curCompressMode === '720p' ? 'true' : 'false'}">720P</button>
             <button type="button" class="m3-method-pill ${curCompressMode === '1080p' ? 'is-active' : ''}" data-compress-mode="1080p" role="radio" aria-checked="${curCompressMode === '1080p' ? 'true' : 'false'}">1080P</button>
@@ -479,16 +479,6 @@
       updateMethodStatusBadge();
       sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: getSelectedMethodId() });
     });
-
-    if (compressToggle) {
-      compressToggle.addEventListener('change', (e) => {
-        if (_compressLocked) {
-          e.target.checked = true;
-          return;
-        }
-        setCompressVideoEnabled(e.target.checked);
-      });
-    }
 
     if (wmInput) {
       wmInput.addEventListener('input', (e) => {
