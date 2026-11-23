@@ -3,7 +3,7 @@
     const MATCHA_ACCENT = '#78c67d';
     const MATCHA_SECONDARY = '#c2ecc4';
     const MATCHA_MUTED = '#58975d';
-    const TEXT_MUTED = 'rgba(242, 247, 242, 0.6)';
+    const TEXT_MUTED = 'rgba(242, 247, 242, 0.72)';
     const BORDER_SUBTLE = 'rgba(255, 255, 255, 0.1)';
     const GRID_LINE = 'rgba(255, 255, 255, 0.06)';
 
@@ -171,59 +171,77 @@
 
     hookGlobalEcharts();
 
+    const extractEChartsFromFiber = (el) => {
+      if (!el) return null;
+      const fiberKey = Object.keys(el).find((k) => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
+      if (!fiberKey) return null;
+      let f = el[fiberKey];
+      let d = 0;
+      while (f && d < 30) {
+        if (f.stateNode) {
+          if (typeof f.stateNode.getEchartsInstance === 'function') {
+            try {
+              const inst = f.stateNode.getEchartsInstance();
+              if (inst && typeof inst.setOption === 'function') return inst;
+            } catch (_) {}
+          }
+          if (f.stateNode.echartsInstance && typeof f.stateNode.echartsInstance.setOption === 'function') {
+            return f.stateNode.echartsInstance;
+          }
+        }
+        let hook = f.memoizedState;
+        let hSteps = 0;
+        while (hook && hSteps < 15) {
+          const ms = hook.memoizedState;
+          const cand = (ms && typeof ms === 'object' && typeof ms.setOption === 'function' && typeof ms.getOption === 'function')
+            ? ms
+            : (ms && ms.current && typeof ms.current === 'object' && typeof ms.current.setOption === 'function' && typeof ms.current.getOption === 'function')
+              ? ms.current
+              : null;
+          if (cand) return cand;
+          hook = hook.next;
+          hSteps++;
+        }
+        f = f.return;
+        d++;
+      }
+      return null;
+    };
+
     const findEChartsInstances = () => {
       const instances = [];
+      const addInst = (inst) => {
+        if (inst && typeof inst.setOption === 'function' && !instances.includes(inst)) {
+          instances.push(inst);
+        }
+      };
 
       if (window.eChartInstances && typeof window.eChartInstances === 'object') {
-        Object.values(window.eChartInstances).forEach((inst) => {
-          if (inst && typeof inst.setOption === 'function' && !instances.includes(inst)) {
-            instances.push(inst);
-          }
-        });
+        Object.values(window.eChartInstances).forEach(addInst);
       }
 
       const chartElements = document.querySelectorAll(
-        '.echarts-for-react, div[_echarts_instance_], [data-tt*="Chart"], [data-tt*="chart"], [class*="chart"]'
+        '[_echarts_instance_], .echarts-for-react, [data-tt*="Chart"], [data-tt*="chart"], canvas'
       );
 
-      chartElements.forEach((el) => {
-        if (window.echarts && typeof window.echarts.getInstanceByDom === 'function') {
-          try {
-            const ecInst = window.echarts.getInstanceByDom(el);
-            if (ecInst && typeof ecInst.setOption === 'function' && !instances.includes(ecInst)) {
-              instances.push(ecInst);
-            }
-          } catch (_) {}
-        }
+      chartElements.forEach((rawEl) => {
+        const el = rawEl.tagName === 'CANVAS'
+          ? (rawEl.closest('[_echarts_instance_]') || rawEl.parentElement?.parentElement || rawEl.parentElement)
+          : rawEl;
+        if (!el) return;
 
-        const fiberKey = Object.keys(el).find((k) => k.startsWith('__reactFiber$') || k.startsWith('__reactInternalInstance$'));
-        if (!fiberKey) return;
-        let f = el[fiberKey];
-        let d = 0;
-        while (f && d < 25) {
-          if (f.stateNode && typeof f.stateNode.getEchartsInstance === 'function') {
-            try {
-              const inst = f.stateNode.getEchartsInstance();
-              if (inst && typeof inst.setOption === 'function' && !instances.includes(inst)) {
-                instances.push(inst);
-              }
-            } catch (e) {}
-            break;
-          }
-          f = f.return;
-          d++;
+        if (window.echarts && typeof window.echarts.getInstanceByDom === 'function') {
+          try { addInst(window.echarts.getInstanceByDom(el)); } catch (_) {}
         }
+        addInst(extractEChartsFromFiber(el));
       });
 
       return instances;
     };
 
     const applyThemeToAllCharts = () => {
-      // Post page & Upload page TIDAK memiliki ECharts — lewati agar nol lag dan CPU hemat!
-      const isPostOrUpload = window.location.pathname.includes('/content') || 
-                             window.location.pathname.includes('/post') || 
-                             window.location.pathname.includes('/upload');
-      if (isPostOrUpload) return;
+      const p = window.location.pathname;
+      if (p.includes('/content') || p.includes('/post') || p.includes('/upload')) return;
 
       const instances = findEChartsInstances();
       instances.forEach((inst) => {
@@ -231,7 +249,9 @@
         try {
           const currentOpt = inst.getOption();
           if (currentOpt) {
-            const isMatcha = currentOpt.color && currentOpt.color[0] === MATCHA_PRIMARY;
+            const firstStroke = currentOpt.series?.[0]?.lineStyle?.color;
+            const isMatcha = currentOpt.color && currentOpt.color[0] === MATCHA_PRIMARY &&
+              (!firstStroke || firstStroke === MATCHA_PRIMARY);
             if (!isMatcha || !inst._hasMatchaThemeApplied) {
               inst._hasMatchaThemeApplied = true;
               inst.setOption(transformEChartsOption(currentOpt), true);
@@ -242,6 +262,72 @@
         }
       });
     };
+
+    let chartObserver = null;
+    let chartApplyTimer = null;
+
+    const scheduleApplyThemeToCharts = () => {
+      if (chartApplyTimer) return;
+      chartApplyTimer = setTimeout(() => {
+        chartApplyTimer = null;
+        applyThemeToAllCharts();
+      }, 120);
+    };
+
+    const stopChartObserver = () => {
+      if (chartObserver) {
+        chartObserver.disconnect();
+        chartObserver = null;
+      }
+      if (chartApplyTimer) {
+        clearTimeout(chartApplyTimer);
+        chartApplyTimer = null;
+      }
+    };
+
+    const startChartObserver = () => {
+      const p = window.location.pathname;
+      if (p.includes('/content') || p.includes('/post') || p.includes('/upload')) {
+        stopChartObserver();
+        return;
+      }
+      if (chartObserver || !document.body) return;
+
+      chartObserver = new MutationObserver((mutations) => {
+        for (let i = 0; i < mutations.length; i++) {
+          const m = mutations[i];
+          if (m.type === 'attributes' && m.attributeName === '_echarts_instance_') {
+            scheduleApplyThemeToCharts();
+            return;
+          }
+          if (m.type === 'childList' && m.addedNodes.length) {
+            for (let j = 0; j < m.addedNodes.length; j++) {
+              const n = m.addedNodes[j];
+              if (n && n.nodeType === 1) {
+                if (n.tagName === 'CANVAS' || n.hasAttribute?.('_echarts_instance_') ||
+                    n.querySelector?.('canvas, [_echarts_instance_]')) {
+                  scheduleApplyThemeToCharts();
+                  return;
+                }
+              }
+            }
+          }
+        }
+      });
+
+      chartObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['_echarts_instance_']
+      });
+    };
+
+    if (document.body) {
+      startChartObserver();
+    } else {
+      document.addEventListener('DOMContentLoaded', startChartObserver, { once: true });
+    }
 
     // Initial load checks (hanya beberapa saat awal halaman dibuka)
     [300, 800, 1500, 2800].forEach((delay) => {

@@ -391,6 +391,7 @@
       setTimeout(applyThemeToAllCharts, 300);
       setTimeout(checkPostGrid, 250);
       setTimeout(injectCheckQualityButtons, 300);
+      startChartObserver();
       startGridObserver();
     });
 
