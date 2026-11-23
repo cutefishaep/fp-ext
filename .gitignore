@@ -1,6 +1,7 @@
-# Build output & local backups
+# Build output, Chrome generated metadata & local backups
 build/
 .backup/
+src/_metadata/
 
 # OS / Editor / Dependencies
 node_modules/
