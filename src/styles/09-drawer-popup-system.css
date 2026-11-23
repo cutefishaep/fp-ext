@@ -311,11 +311,11 @@ div[class*="delete-modal"] div,
 
   #fish-quality-modal {
     position: relative !important;
-    width: min(520px, 92vw) !important;
+    width: min(440px, 92vw) !important;
     max-width: 92vw !important;
     max-height: 88vh !important;
     border-radius: 28px !important;
-    padding: 24px !important;
+    padding: 20px !important;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.82) !important;
     animation: m3-popup-scale-flex 0.2s cubic-bezier(0.1, 0.9, 0.2, 1) !important;
   }

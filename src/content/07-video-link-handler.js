@@ -294,22 +294,17 @@
         ? (username ? `https://www.tiktok.com/@${username}/video/${itemId}` : `https://www.tiktok.com/share/video/${itemId}`)
         : null;
 
+      const initialCover = getCoverFromCard(card) || itemData?.video?.cover?.url_list?.[0] || itemData?.video?.origin_cover?.url_list?.[0] || '';
+      const initialNickname = itemData?.author?.nickname || username || 'Creator';
+      const initialHandle = username ? `@${username}` : '@tiktok';
+      const initialCaption = itemData?.desc || itemData?.title || getTitleFromCard(card) || '—';
+
       const overlay = document.createElement('div');
       overlay.id = 'fish-quality-modal-overlay';
       overlay.innerHTML = `
         <div id="fish-quality-modal" role="dialog" aria-modal="true">
           <div class="fish-qm-header">
-            <div class="fish-qm-title-row">
-              <div class="fish-qm-badge-icon">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-8 12H9.5v-2h-2v2H6V9h1.5v2.5h2V9H11v6zm7-1c0 .55-.45 1-1 1h-4c-.55 0-1-.45-1-1V10c0-.55.45-1 1-1h4c.55 0 1 .45 1 1v4zm-1.5-.5v-3h-2.5v3h2.5z"/>
-                </svg>
-              </div>
-              <div class="fish-qm-header-texts">
-                <h2 class="fish-qm-title">Quality & Ingest Inspector</h2>
-                <span class="fish-qm-subtitle">Live Stream Atom Probe • Independent</span>
-              </div>
-            </div>
+            <h2 class="fish-qm-title">TikTok Analytics</h2>
             <button type="button" class="fish-qm-close-btn" id="fish-qm-close" title="Close">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
@@ -327,89 +322,82 @@
             </div>
           </div>
 
-          <div class="fish-qm-bento">
-            <div class="fish-qm-card">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/></svg>
-                Resolution
-              </span>
-              <span class="fish-qm-card-val" id="fish-qm-res"><span class="fish-qm-shimmer">Probing...</span></span>
-              <span class="fish-qm-card-sub" id="fish-qm-res-sub">Reading video header</span>
-            </div>
-
-            <div class="fish-qm-card">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.28-10.43zM10.59 15.41a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg>
-                Framerate
-              </span>
-              <span class="fish-qm-card-val" id="fish-qm-fps"><span class="fish-qm-shimmer">Measuring...</span></span>
-              <span class="fish-qm-card-sub" id="fish-qm-fps-sub">Calculating timescale</span>
-            </div>
-
-            <div class="fish-qm-card">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z"/></svg>
-                Bitrate
-              </span>
-              <span class="fish-qm-card-val" id="fish-qm-bitrate"><span class="fish-qm-shimmer">Calculating...</span></span>
-              <span class="fish-qm-card-sub">CDN Stream Ingest</span>
-            </div>
-
-            <div class="fish-qm-card">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM19 18H6c-2.21 0-4-1.79-4-4 0-2.05 1.53-3.76 3.56-3.97l1.07-.11.5-.95C8.08 7.14 9.94 6 12 6c2.62 0 4.88 1.86 5.39 4.43l.3 1.5 1.53.11c1.56.1 2.78 1.41 2.78 2.96 0 1.65-1.35 3-3 3z"/></svg>
-                File Size
-              </span>
-              <span class="fish-qm-card-val" id="fish-qm-size"><span class="fish-qm-shimmer">Fetching stream...</span></span>
-              <span class="fish-qm-card-sub" id="fish-qm-dur-sub">Connecting CDN</span>
-            </div>
-
-            <div class="fish-qm-card">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
-                Region
-              </span>
-              <span class="fish-qm-card-val" id="fish-qm-region"><span class="fish-qm-shimmer">Detecting...</span></span>
-              <span class="fish-qm-card-sub" id="fish-qm-region-sub">Server location</span>
-            </div>
-
-            <div class="fish-qm-card">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
-                Upload Date
-              </span>
-              <span class="fish-qm-card-val" id="fish-qm-date"><span class="fish-qm-shimmer">Checking...</span></span>
-              <span class="fish-qm-card-sub" id="fish-qm-date-sub">Video publish time</span>
-            </div>
-
-            <div class="fish-qm-card fish-qm-card-wide">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>
-                Patcher Method
-              </span>
-              <div class="fish-qm-method-wrap" id="fish-qm-method-wrap">
-                <span class="fish-qm-method-val" id="fish-qm-method">Probing...</span>
-              </div>
-            </div>
-
-            <div class="fish-qm-card fish-qm-card-wide">
-              <span class="fish-qm-card-label">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
-                Shadowban Status
-              </span>
-              <div class="fish-qm-safety-val" id="fish-qm-shadowban">
-                <span class="fish-qm-shimmer">Checking...</span>
-              </div>
+          <div class="fish-qm-media-card">
+            <img class="fish-qm-media-thumb" id="fish-qm-media-cover" alt="Cover video" ${initialCover ? `src="${escapeHTML(initialCover)}"` : 'style="display:none;"'}>
+            <div class="fish-qm-media-body">
+              <div class="fish-qm-media-title" id="fish-qm-media-author">${escapeHTML(initialNickname)}</div>
+              <div class="fish-qm-media-sub" id="fish-qm-media-handle">${escapeHTML(initialHandle)}</div>
+              <div class="fish-qm-media-caption" id="fish-qm-media-caption">${escapeHTML(initialCaption)}</div>
             </div>
           </div>
 
-          <div class="fish-qm-stats-row">
-            <div class="fish-qm-stat-chip" id="fish-qm-chip-views">Views: <strong>${escapeHTML(displayViews)}</strong></div>
-            <div class="fish-qm-stat-chip" id="fish-qm-chip-likes">Likes: <strong>${escapeHTML(displayLikes)}</strong></div>
-            <div class="fish-qm-stat-chip" id="fish-qm-chip-comments">Comments: <strong>${escapeHTML(displayComments)}</strong></div>
-            <div class="fish-qm-stat-chip" id="fish-qm-chip-shares">Shares: <strong>${escapeHTML(displayShares)}</strong></div>
-            <div class="fish-qm-stat-chip" id="fish-qm-chip-saves">Saves: <strong>${escapeHTML(displaySaves)}</strong></div>
-            <div class="fish-qm-stat-chip" id="fish-qm-chip-eng">Engagement: <strong>${escapeHTML(displayEngagement)}</strong></div>
+          <div class="fish-qm-detail-card">
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>Views</span>
+              <span class="fish-qm-detail-val is-highlight" id="fish-qm-kv-views">${escapeHTML(displayViews)}</span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>Likes</span>
+              <span class="fish-qm-detail-val" id="fish-qm-kv-likes">${escapeHTML(displayLikes)}</span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>Comments</span>
+              <span class="fish-qm-detail-val" id="fish-qm-kv-comments">${escapeHTML(displayComments)}</span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg>Shares</span>
+              <span class="fish-qm-detail-val" id="fish-qm-kv-shares">${escapeHTML(displayShares)}</span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/></svg>Saves</span>
+              <span class="fish-qm-detail-val" id="fish-qm-kv-saves">${escapeHTML(displaySaves)}</span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M16 6l2.29 2.29-4.88 4.88-4-4L2 16.59 3.41 18l6-6 4 4 6.3-6.29L22 12V6z"/></svg>Engagement</span>
+              <span class="fish-qm-detail-val is-highlight" id="fish-qm-kv-engagement">${escapeHTML(displayEngagement)}</span>
+            </div>
+
+            <hr class="fish-qm-detail-divider">
+
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M19 12h-2v3h-3v2h5v-5zM7 9h3V7H5v5h2V9zm14-6H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16.01H3V4.99h18v14.02z"/></svg>Resolution</span>
+              <span class="fish-qm-detail-val" id="fish-qm-res"><span class="fish-qm-shimmer">Probing...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.28-10.43zM10.59 15.41a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z"/></svg>FPS</span>
+              <span class="fish-qm-detail-val" id="fish-qm-fps"><span class="fish-qm-shimmer">Measuring...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z"/></svg>Bitrate</span>
+              <span class="fish-qm-detail-val" id="fish-qm-bitrate"><span class="fish-qm-shimmer">Calculating...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>Duration</span>
+              <span class="fish-qm-detail-val" id="fish-qm-duration"><span class="fish-qm-shimmer">Checking...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M17 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm-5 16c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/></svg>Size</span>
+              <span class="fish-qm-detail-val" id="fish-qm-size"><span class="fish-qm-shimmer">Fetching...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/></svg>Method</span>
+              <span class="fish-qm-detail-val" id="fish-qm-method"><span class="fish-qm-shimmer">Probing...</span></span>
+            </div>
+
+            <hr class="fish-qm-detail-divider">
+
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>Status</span>
+              <span class="fish-qm-detail-val is-highlight" id="fish-qm-shadowban"><span class="fish-qm-shimmer">Checking...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>Region</span>
+              <span class="fish-qm-detail-val" id="fish-qm-region"><span class="fish-qm-shimmer">Detecting...</span></span>
+            </div>
+            <div class="fish-qm-detail-row">
+              <span class="fish-qm-detail-key"><svg viewBox="0 0 24 24"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>Upload Date</span>
+              <span class="fish-qm-detail-val" id="fish-qm-date"><span class="fish-qm-shimmer">Checking...</span></span>
+            </div>
           </div>
 
           <div class="fish-qm-actions">
@@ -491,13 +479,29 @@
       }
 
       // Update UI elements with REAL probed data (ZERO DUMMY DATA)
+      const mediaCoverEl = overlay.querySelector('#fish-qm-media-cover');
+      const mediaAuthorEl = overlay.querySelector('#fish-qm-media-author');
+      const mediaHandleEl = overlay.querySelector('#fish-qm-media-handle');
+      const mediaCaptionEl = overlay.querySelector('#fish-qm-media-caption');
+      if (mediaCoverEl && tikwmData?.cover) {
+        mediaCoverEl.src = tikwmData.cover;
+        mediaCoverEl.style.display = 'block';
+      }
+      if (mediaAuthorEl && tikwmData?.author?.nickname) {
+        mediaAuthorEl.textContent = tikwmData.author.nickname;
+      }
+      if (mediaHandleEl && tikwmData?.author?.unique_id) {
+        mediaHandleEl.textContent = `@${tikwmData.author.unique_id}`;
+      }
+      if (mediaCaptionEl && tikwmData?.title) {
+        mediaCaptionEl.textContent = tikwmData.title;
+      }
+
       const resEl = overlay.querySelector('#fish-qm-res');
-      const resSubEl = overlay.querySelector('#fish-qm-res-sub');
       const fpsEl = overlay.querySelector('#fish-qm-fps');
-      const fpsSubEl = overlay.querySelector('#fish-qm-fps-sub');
       const bitrateEl = overlay.querySelector('#fish-qm-bitrate');
+      const durationEl = overlay.querySelector('#fish-qm-duration');
       const sizeEl = overlay.querySelector('#fish-qm-size');
-      const durSubEl = overlay.querySelector('#fish-qm-dur-sub');
       const methodEl = overlay.querySelector('#fish-qm-method');
       const shadowbanEl = overlay.querySelector('#fish-qm-shadowban');
       const copyStreamBtn = overlay.querySelector('#fish-qm-copy-stream');
@@ -517,29 +521,17 @@
       const finalFps = atomMeta?.fps || (itemData?.video?.fps ? Math.round(itemData.video.fps) : null);
       const finalDuration = Math.round(atomMeta?.duration || itemData?.video?.duration || tikwmData?.duration || 0);
 
-      // Resolution (No dummy values!)
       if (resEl) {
-        if (finalW && finalH) {
-          resEl.textContent = `${finalW} × ${finalH}`;
-          if (resSubEl) resSubEl.textContent = finalW >= 1080 ? '1080p FHD (9:16 Vertical)' : `${finalW}p HD`;
-        } else {
-          resEl.textContent = '—';
-          if (resSubEl) resSubEl.textContent = 'Stream probe pending';
-        }
+        resEl.textContent = (finalW && finalH) ? `${finalW} × ${finalH}` : '—';
       }
 
-      // Framerate (No dummy values!)
       if (fpsEl) {
-        if (finalFps) {
-          fpsEl.textContent = `${finalFps} FPS`;
-          if (fpsSubEl) fpsSubEl.textContent = finalFps >= 59 ? 'High Framerate (60 fps)' : `${finalFps} fps Stream`;
-        } else {
-          fpsEl.textContent = '—';
-          if (fpsSubEl) fpsSubEl.textContent = 'Timescale delta pending';
-        }
+        fpsEl.textContent = finalFps ? `${finalFps} fps` : '—';
       }
 
-      if (durSubEl && finalDuration) durSubEl.textContent = `Duration: ${finalDuration}s`;
+      if (durationEl) {
+        durationEl.textContent = finalDuration ? `${finalDuration}s` : '—';
+      }
 
       // File Size
       if (sizeEl) {
@@ -565,58 +557,30 @@
         }
       }
 
-      // Patcher Method (Plain text, auto-scroll jika panjang, no hyperbolic badge)
+      // Patcher Method
       if (methodEl) {
         let cleanComment = (atomMeta?.comment || '').trim();
         if ((cleanComment.startsWith('"') && cleanComment.endsWith('"')) || (cleanComment.startsWith("'") && cleanComment.endsWith("'"))) {
           cleanComment = cleanComment.slice(1, -1).trim();
         }
 
-        if (!cleanComment || isUndetectedMethodStr(cleanComment)) {
-          methodEl.textContent = 'Undetected';
-        } else {
-          methodEl.textContent = cleanComment;
-        }
-
-        const wrap = overlay.querySelector('#fish-qm-method-wrap');
-        if (wrap) {
-          setTimeout(() => {
-            const diff = methodEl.scrollWidth - wrap.clientWidth;
-            if (diff > 4) {
-              wrap.style.overflowX = 'auto';
-              wrap.style.whiteSpace = 'nowrap';
-              methodEl.style.display = 'inline-block';
-            }
-          }, 60);
-        }
+        const methodText = (!cleanComment || isUndetectedMethodStr(cleanComment)) ? 'Undetected' : cleanComment;
+        methodEl.textContent = methodText;
+        methodEl.title = methodText;
       }
 
       // Region
       const regionEl = overlay.querySelector('#fish-qm-region');
-      const regionSubEl = overlay.querySelector('#fish-qm-region-sub');
       const rawRegion = tikwmData?.region || itemData?.region || itemData?.video?.region;
       if (regionEl) {
-        if (rawRegion) {
-          regionEl.textContent = formatRegion(rawRegion);
-          if (regionSubEl) regionSubEl.textContent = 'Server location';
-        } else {
-          regionEl.textContent = '—';
-          if (regionSubEl) regionSubEl.textContent = 'Region not available';
-        }
+        regionEl.textContent = rawRegion ? formatRegion(rawRegion) : '—';
       }
 
       // Upload Date
       const dateEl = overlay.querySelector('#fish-qm-date');
-      const dateSubEl = overlay.querySelector('#fish-qm-date-sub');
       const rawEpoch = tikwmData?.create_time || itemData?.create_time || itemData?.createTime;
       if (dateEl) {
-        if (rawEpoch) {
-          dateEl.textContent = formatUploadDate(rawEpoch);
-          if (dateSubEl) dateSubEl.textContent = 'Published timestamp';
-        } else {
-          dateEl.textContent = '—';
-          if (dateSubEl) dateSubEl.textContent = 'Date not available';
-        }
+        dateEl.textContent = rawEpoch ? formatUploadDate(rawEpoch) : '—';
       }
 
       // Live Stats Update (Using exact numbers from TikWM / TikTok API)
@@ -626,33 +590,32 @@
       const sCount = tikwmData?.share_count ?? itemData?.stats?.share_count;
       const svCount = tikwmData?.collect_count ?? itemData?.stats?.collect_count;
 
-      const chipViews = overlay.querySelector('#fish-qm-chip-views');
-      const chipLikes = overlay.querySelector('#fish-qm-chip-likes');
-      const chipComments = overlay.querySelector('#fish-qm-chip-comments');
-      const chipShares = overlay.querySelector('#fish-qm-chip-shares');
-      const chipSaves = overlay.querySelector('#fish-qm-chip-saves');
-      const chipEng = overlay.querySelector('#fish-qm-chip-eng');
+      const kvViews = overlay.querySelector('#fish-qm-kv-views');
+      const kvLikes = overlay.querySelector('#fish-qm-kv-likes');
+      const kvComments = overlay.querySelector('#fish-qm-kv-comments');
+      const kvShares = overlay.querySelector('#fish-qm-kv-shares');
+      const kvSaves = overlay.querySelector('#fish-qm-kv-saves');
+      const kvEng = overlay.querySelector('#fish-qm-kv-engagement');
 
-      if (chipViews && vCount !== undefined && vCount !== null) chipViews.innerHTML = `Views: <strong>${escapeHTML(formatStatNum(vCount))}</strong>`;
-      if (chipLikes && lCount !== undefined && lCount !== null) chipLikes.innerHTML = `Likes: <strong>${escapeHTML(formatStatNum(lCount))}</strong>`;
-      if (chipComments && cCount !== undefined && cCount !== null) chipComments.innerHTML = `Comments: <strong>${escapeHTML(formatStatNum(cCount))}</strong>`;
-      if (chipShares && sCount !== undefined && sCount !== null) chipShares.innerHTML = `Shares: <strong>${escapeHTML(formatStatNum(sCount))}</strong>`;
-      if (chipSaves && svCount !== undefined && svCount !== null) chipSaves.innerHTML = `Saves: <strong>${escapeHTML(formatStatNum(svCount))}</strong>`;
+      if (kvViews && vCount !== undefined && vCount !== null) kvViews.textContent = formatStatNum(vCount);
+      if (kvLikes && lCount !== undefined && lCount !== null) kvLikes.textContent = formatStatNum(lCount);
+      if (kvComments && cCount !== undefined && cCount !== null) kvComments.textContent = formatStatNum(cCount);
+      if (kvShares && sCount !== undefined && sCount !== null) kvShares.textContent = formatStatNum(sCount);
+      if (kvSaves && svCount !== undefined && svCount !== null) kvSaves.textContent = formatStatNum(svCount);
 
-      if (chipEng) {
+      if (kvEng) {
         if (vCount && Number(vCount) > 0 && lCount !== undefined && lCount !== null) {
           const totalInteractions = Number(lCount) + Number(cCount || 0) + Number(sCount || 0) + Number(svCount || 0);
-          const engPct = ((totalInteractions / Number(vCount)) * 100).toFixed(2);
-          chipEng.innerHTML = `Engagement: <strong>${engPct}%</strong>`;
+          kvEng.textContent = ((totalInteractions / Number(vCount)) * 100).toFixed(2) + '%';
         }
       }
 
-      // Shadowban Status (Cukup 'Safe' atau 'Shadow Banned', no hyperbole)
+      // Shadowban Status
       if (shadowbanEl) {
         const isRestricted = !!(tikwmData?.is_nff_or_nr || itemData?.is_nff_or_nr || itemData?.status === 2 || itemData?.review_status === 2);
-        shadowbanEl.innerHTML = isRestricted
-          ? `<span class="fish-qm-status-val warn">Shadow Banned</span>`
-          : `<span class="fish-qm-status-val safe">Safe</span>`;
+        shadowbanEl.classList.toggle('is-highlight', !isRestricted);
+        shadowbanEl.classList.toggle('is-warn', isRestricted);
+        shadowbanEl.textContent = isRestricted ? 'Shadow Banned' : 'Safe';
       }
     };
 

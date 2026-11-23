@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fish Acceleration",
-  "version": "1.8",
+  "version": "1.9",
   "description": "Desktop UA, Material 3 Dark theme & 1:1 Ingest Bypass for TikTok Studio.",
   "icons": {
     "16": "icons/icon16.png",
