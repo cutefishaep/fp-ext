@@ -96,11 +96,13 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
     } catch (_) {}
   }
 
+  const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
   let actualPkgSha = '';
-  let expectedPkgSha = '';
-  if (zipAsset?.browser_download_url) {
-    expectedPkgSha = String(zipAsset.digest || '').replace(/^sha256:/i, '').trim() ||
-      String(integrityData?.packages?.zip?.sha256 || '').trim();
+  let expectedPkgSha = String(zipAsset?.digest || '').replace(/^sha256:/i, '').trim() ||
+    String(integrityData?.packages?.zip?.sha256 || '').trim();
+
+  // Hanya download paket .zip jika memang ada versi lebih baru (atau jika integrity.json tidak tersedia)
+  if (zipAsset?.browser_download_url && (hasUpdate || !integrityData?.files)) {
     try {
       emit(22, 'Downloading release package...', zipAsset.name || 'Downloading ZIP...');
       const zipRes = await fetch(zipAsset.browser_download_url, { cache: 'no-store' });
@@ -235,7 +237,6 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
     await chrome.storage?.local?.set({ [LOCAL_UPDATE_CACHE_KEY]: cachePayload });
   } catch (_) {}
 
-  const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
   return {
     status: hasUpdate ? 'update_available' : 'ok',
     ...cachePayload
