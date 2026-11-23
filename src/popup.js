@@ -44,9 +44,10 @@
     return btn;
   };
 
-  const openStudio = () => {
-    chrome.tabs.create({ url: STUDIO_URL });
-    window.close();
+  const openStudio = (bypassed = false) => {
+    chrome.runtime.sendMessage({ type: 'OPEN_VERIFIED_STUDIO', url: STUDIO_URL, bypassed }, () => {
+      window.close();
+    });
   };
 
   const renderChecking = () => {
@@ -96,9 +97,7 @@
 
       addButton('Close', 'm3-btn-secondary', () => window.close());
       addButton("I don't care about that", 'm3-btn-danger', () => {
-        chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: true }, () => {
-          openStudio();
-        });
+        openStudio(true);
       });
       return;
     }
@@ -120,9 +119,7 @@
       } else {
         addButton('Check Again', 'm3-btn-secondary', runCheck);
       }
-      addButton('Open TikTok Studio', 'm3-btn-primary', () => {
-        chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: false }, openStudio);
-      });
+      addButton('Open TikTok Studio', 'm3-btn-primary', () => openStudio(false));
       return;
     }
 

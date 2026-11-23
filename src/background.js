@@ -11,7 +11,7 @@ const ALLOWED_STREAM_HOST_RE = /(?:^|\.)(tiktokcdn\.com|tiktokcdn-us\.com|akamai
 const ALLOWED_TIKWM_HOST_RE = /(?:^|\.)tikwm\.com$/i;
 const GITHUB_LATEST_RELEASE_URL = 'https://api.github.com/repos/cutefishaep/fp-ext/releases/latest';
 const TIKTOK_STUDIO_URL_RE = /^https:\/\/([^/]+\.)?tiktok\.com\/(tiktokstudio(\/|$|\?|#)|upload(\/|$|\?|#))/i;
-const SESSION_VERIFIED_KEY = 'fa_verified_session';
+const SESSION_TABS_KEY = 'fa_verified_tabs';
 const LOCAL_UPDATE_CACHE_KEY = 'fa_update_cache';
 const LIVE_CORE_STORAGE_KEY = 'fa_live_core';
 
@@ -639,19 +639,50 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   };
 };
 
+chrome.tabs?.onRemoved?.addListener((tabId) => {
+  chrome.storage?.session?.get(SESSION_TABS_KEY, (data) => {
+    const tabs = data?.[SESSION_TABS_KEY];
+    if (tabs && tabs[String(tabId)]) {
+      delete tabs[String(tabId)];
+      chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
+    }
+  });
+});
+
 chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
-  const candidateUrl = changeInfo.url || (changeInfo.status === 'loading' ? tab?.url : null);
+  const isFullLoad = changeInfo.status === 'loading';
+  const candidateUrl = changeInfo.url || (isFullLoad ? tab?.url : null);
   if (!candidateUrl || !TIKTOK_STUDIO_URL_RE.test(candidateUrl)) return;
 
   getVersions().then(({ coreVersion }) => {
-    chrome.storage?.session?.get(SESSION_VERIFIED_KEY, (data) => {
-      const sess = data?.[SESSION_VERIFIED_KEY];
-      if (sess && sess.verified && sess.version === coreVersion) {
-        if (changeInfo.status === 'loading' || changeInfo.url) {
+    chrome.storage?.session?.get(SESSION_TABS_KEY, (data) => {
+      const tabs = data?.[SESSION_TABS_KEY] || {};
+      const key = String(tabId);
+      const entry = tabs[key];
+
+      if (isFullLoad) {
+        if (entry && entry.allowNextLoad && entry.version === coreVersion && (Date.now() - entry.approvedAt < 20000)) {
+          entry.allowNextLoad = false;
+          entry.spaAllowed = true;
+          tabs[key] = entry;
+          chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
           injectLiveCoreCss(tabId);
+          return;
         }
+        if (entry) {
+          delete tabs[key];
+          chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
+        }
+        const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
+        chrome.tabs.update(tabId, { url: gateUrl });
         return;
       }
+
+      if (entry && entry.spaAllowed && entry.version === coreVersion) {
+        injectLiveCoreCss(tabId);
+        return;
+      }
+
       const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
       chrome.tabs.update(tabId, { url: gateUrl });
     });
@@ -736,15 +767,48 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   }
 
   if (message.type === 'APPROVE_SESSION') {
+    const tabId = message.tabId || _sender?.tab?.id;
     getVersions().then(({ coreVersion }) => {
-      const payload = {
-        version: coreVersion,
-        verified: true,
-        bypassed: Boolean(message.bypassed),
-        verifiedAt: Date.now()
-      };
-      chrome.storage?.session?.set({ [SESSION_VERIFIED_KEY]: payload }, () => {
-        sendResponse({ ok: true });
+      chrome.storage?.session?.get(SESSION_TABS_KEY, (data) => {
+        const tabs = data?.[SESSION_TABS_KEY] || {};
+        if (tabId) {
+          tabs[String(tabId)] = {
+            version: coreVersion,
+            allowNextLoad: true,
+            spaAllowed: true,
+            bypassed: Boolean(message.bypassed),
+            approvedAt: Date.now()
+          };
+        }
+        chrome.storage?.session?.set({ [SESSION_TABS_KEY]: tabs }, () => {
+          sendResponse({ ok: true });
+        });
+      });
+    });
+    return true;
+  }
+
+  if (message.type === 'OPEN_VERIFIED_STUDIO') {
+    const targetUrl = message.url || 'https://www.tiktok.com/tiktokstudio/content';
+    getVersions().then(({ coreVersion }) => {
+      chrome.tabs.create({ url: targetUrl }, (newTab) => {
+        if (!newTab?.id) {
+          sendResponse({ ok: false });
+          return;
+        }
+        chrome.storage?.session?.get(SESSION_TABS_KEY, (data) => {
+          const tabs = data?.[SESSION_TABS_KEY] || {};
+          tabs[String(newTab.id)] = {
+            version: coreVersion,
+            allowNextLoad: true,
+            spaAllowed: true,
+            bypassed: Boolean(message.bypassed),
+            approvedAt: Date.now()
+          };
+          chrome.storage?.session?.set({ [SESSION_TABS_KEY]: tabs }, () => {
+            sendResponse({ ok: true, tabId: newTab.id });
+          });
+        });
       });
     });
     return true;
