@@ -1,0 +1,10 @@
+/* ========================================================
+ * 19. Edit Cover Modal
+ * Shell (Desktop Centered Dialog + Mobile Bottom Sheet Drawer)
+ * dikelola terpusat di 09-drawer-popup-system.css
+ * ======================================================== */
+div[class*="cover-modal"],
+div[class*="edit-cover-modal"],
+div[data-tt="components_Modal_Container"]:has([class*="cover"]) {
+  z-index: 100008 !important;
+}

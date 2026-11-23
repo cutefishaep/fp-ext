@@ -1,0 +1,587 @@
+/* ========================================================
+ * 13. Material 3 Unified Pop-up & Mobile Bottom Sheet Drawer System
+ * Single Source of Truth untuk SEMUA Modal / Pop-up:
+ *   - TikTok components_Modal (Exit, Delete, Confirm)
+ *   - .TUXModal / .common-modal / [role="dialog"] (Discard, AI Content, Audience)
+ *   - Sound Picker Modal (.pickerModal-*, .MusicPickerView__root)
+ *   - Edit Cover Modal (cover-modal, edit-cover-modal)
+ *   - Fish Quality Checker Modal (#fish-quality-modal)
+ *   - Custom .m3-drawer
+ *
+ * Desktop (>= 768px): Centered Floating Dialog Pop-up
+ * Mobile  (<= 767px): Bottom Sheet Drawer dengan Drag Handle Pill
+ * ======================================================== */
+
+/* Keyframe Animasi Backdrop */
+@keyframes m3-backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Keyframe Animasi Slide Up untuk Mobile Drawer */
+@keyframes m3-drawer-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0.65;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Keyframe Animasi Pop-up untuk Desktop (fixed centered) */
+@keyframes m3-popup-scale {
+  from {
+    transform: translate(-50%, -47%) scale(0.94);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Keyframe Animasi Pop-up untuk Desktop (flex centered) */
+@keyframes m3-popup-scale-flex {
+  from {
+    transform: translateY(10px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+/* Backdrop Mask Gelap (Ringan tanpa Blur) */
+.TUXModal-mask,
+.common-modal-mask,
+[class*="modal-mask"],
+div[data-tt*="components_Modal_Mask"],
+div[data-tt*="components_Modal_Backdrop"],
+.m3-drawer-backdrop {
+  background-color: rgba(0, 0, 0, 0.72) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 100000 !important;
+  animation: m3-backdrop-fade-in 0.18s ease-out forwards !important;
+  will-change: opacity;
+  pointer-events: auto !important;
+}
+
+/* Modal Overlay Wrapper Container (Transparan & Memusatkan Konten) */
+.TUXModal-overlay,
+div.TUXModal-overlay,
+[class*="modal-overlay"],
+[class*="modal-wrapper"],
+[class*="modal-wrap"],
+div[data-tt*="components_Modal_Overlay"],
+div[class*="common-modal-overlay"] {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  z-index: 100001 !important;
+  pointer-events: none !important;
+}
+
+div[data-tt*="components_Modal_Overlay"]:not(:has([data-tt*="Mask"])):not(:has(.TUXModal-mask)):not(:has(.common-modal-mask)) {
+  background: rgba(0, 0, 0, 0.72) !important;
+  background-color: rgba(0, 0, 0, 0.72) !important;
+  pointer-events: auto !important;
+}
+
+/* ========================================================
+ * UNIFIED SURFACE SHELL — SEMUA MODAL / POP-UP
+ * ======================================================== */
+.TUXModal-overlay .TUXModal:not(:has(div[data-tt="components_Modal_Container"])),
+.TUXModal-overlay [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+div[data-tt*="components_Modal_Overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+div[class*="Modal-overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+div[data-tt="components_Modal_Container"].css-ee0r8k,
+div[data-tt="components_Modal_Container"]:has(> div[data-tt="components_Modal_ButtonContainer"]),
+div[data-tt="components_Modal_Container"]:has(> [data-tt="components_Modal_TUXModalTitle"]),
+div[data-tt="components_Modal_Container"]:has(> ._TUXModalTitle),
+div[data-tt="components_Modal_Container"]:has([class*="cover"]),
+.common-modal,
+.common-modal-confirm-modal,
+div[class*="confirm-modal"],
+div[class*="ConfirmModal"],
+div[class*="delete-modal"],
+.pickerModal-e479j7,
+div[class*="pickerModal"],
+div[class*="cover-modal"],
+div[class*="edit-cover-modal"],
+#fish-quality-modal,
+.Modal__root,
+.Modal__content,
+.m3-drawer {
+  background-color: var(--m3-surface-container, #1a221c) !important;
+  background: var(--m3-surface-container, #1a221c) !important;
+  border: 1px solid rgba(163, 219, 167, 0.22) !important;
+  color: var(--m3-text-primary, #f2f7f2) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  z-index: 100005 !important;
+  pointer-events: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Hapus semua latar putih di dalam modal dialog TikTok */
+.TUXModal-overlay div,
+div[data-tt*="Modal"] div,
+div[class*="confirm-modal"] div,
+div[class*="delete-modal"] div,
+.common-modal div {
+  background-color: transparent !important;
+}
+
+/* Tombol Back di Halaman Upload */
+.m3-upload-page-back-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #f2f7f2 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-bottom: 12px !important;
+  transition: all 0.2s ease !important;
+}
+
+.m3-upload-page-back-btn:hover {
+  background: rgba(163, 219, 167, 0.18) !important;
+  border-color: #a3dba7 !important;
+  color: #a3dba7 !important;
+}
+
+.m3-upload-page-back-btn svg {
+  width: 16px !important;
+  height: 16px !important;
+  fill: currentColor !important;
+}
+
+/* Header, Body, & Footer Dasar */
+.common-modal-header,
+.common-modal-header .TUXText {
+  color: var(--m3-text-primary) !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+}
+
+.common-modal-body,
+.common-modal-body .TUXText,
+.common-modal-body p {
+  color: var(--m3-text-secondary) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.common-modal-footer {
+  display: flex !important;
+  border-top: none !important;
+}
+
+/* Tombol Modal: TUXButton */
+.TUXButton {
+  border-radius: 9999px !important;
+  height: 40px !important;
+  padding: 0 22px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.TUXButton-label {
+  color: inherit !important;
+  font-weight: inherit !important;
+}
+
+/* Tombol Sekunder / Batal ("Not now", "Cancel") */
+.TUXButton--secondary {
+  background-color: transparent !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-primary) !important;
+}
+
+.TUXButton--secondary:hover {
+  background-color: var(--m3-surface-container-high) !important;
+  border-color: var(--m3-primary) !important;
+}
+
+/* Tombol Utama / Aksi ("Discard", "Confirm") */
+.TUXButton--primary {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  border: none !important;
+}
+
+.TUXButton--primary:hover {
+  background-color: var(--m3-primary-hover) !important;
+}
+
+/* ========================================================
+ * DESKTOP (>= 768px): Centered Floating Dialog Pop-up
+ * ======================================================== */
+@media (min-width: 768px) {
+  .TUXModal-overlay .TUXModal:not(:has(div[data-tt="components_Modal_Container"])),
+  .TUXModal-overlay [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+  div[data-tt*="components_Modal_Overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+  div[class*="Modal-overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+  div[data-tt="components_Modal_Container"].css-ee0r8k,
+  div[data-tt="components_Modal_Container"]:has(> div[data-tt="components_Modal_ButtonContainer"]),
+  div[data-tt="components_Modal_Container"]:has(> [data-tt="components_Modal_TUXModalTitle"]),
+  div[data-tt="components_Modal_Container"]:has(> ._TUXModalTitle),
+  div[data-tt="components_Modal_Container"]:has([class*="cover"]),
+  .common-modal,
+  .common-modal-confirm-modal,
+  div[class*="confirm-modal"],
+  div[class*="ConfirmModal"],
+  div[class*="delete-modal"],
+  .pickerModal-e479j7,
+  div[class*="pickerModal"],
+  div[class*="cover-modal"],
+  div[class*="edit-cover-modal"],
+  .m3-drawer {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    bottom: auto !important;
+    right: auto !important;
+    transform: translate(-50%, -50%) !important;
+    width: min(460px, calc(100vw - 32px)) !important;
+    max-width: calc(100vw - 32px) !important;
+    min-width: 0 !important;
+    height: auto !important;
+    max-height: 86vh !important;
+    overflow-y: auto !important;
+    border-radius: 28px !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.82) !important;
+    animation: m3-popup-scale 0.2s cubic-bezier(0.1, 0.9, 0.2, 1) !important;
+  }
+
+  /* Rich Picker Modals di Desktop (Sound Picker & Edit Cover): lebih lebar & fleksibel */
+  .pickerModal-e479j7,
+  div[class*="pickerModal"],
+  .TUXModal-overlay > .TUXModal:has(.MusicPickerView__root),
+  .TUXModal-overlay > div[role="dialog"]:has(.MusicPickerView__root) {
+    width: min(580px, 92vw) !important;
+    height: min(650px, 86vh) !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  div[class*="cover-modal"],
+  div[class*="edit-cover-modal"],
+  div[data-tt="components_Modal_Container"]:has([class*="cover"]) {
+    width: min(560px, 92vw) !important;
+  }
+
+  /* Quality Checker Modal di Desktop (flex centered di dalam #fish-quality-modal-overlay) */
+  #fish-quality-modal-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px !important;
+  }
+
+  #fish-quality-modal {
+    position: relative !important;
+    width: min(520px, 92vw) !important;
+    max-width: 92vw !important;
+    max-height: 88vh !important;
+    border-radius: 28px !important;
+    padding: 24px !important;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.82) !important;
+    animation: m3-popup-scale-flex 0.2s cubic-bezier(0.1, 0.9, 0.2, 1) !important;
+  }
+
+  /* Sembunyikan drag handle bar di desktop */
+  .TUXModal::before,
+  .common-modal::before,
+  .common-modal-confirm-modal::before,
+  .TUXModal-overlay [role="dialog"]::before,
+  div[data-tt*="Modal_Container"]::before,
+  .pickerModal-e479j7::before,
+  div[class*="pickerModal"]::before,
+  div[class*="cover-modal"]::before,
+  div[class*="edit-cover-modal"]::before,
+  #fish-quality-modal::before,
+  .m3-drawer::before {
+    display: none !important;
+  }
+
+  .common-modal-footer,
+  div[data-tt*="ButtonContainer"],
+  div[class*="ModalFooter"] {
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 12px !important;
+    margin-top: 20px !important;
+  }
+}
+
+/* ========================================================
+ * MOBILE (<= 767px): Unified Bottom Sheet Drawer
+ * Semua Pop-up / Modal otomatis jadi Drawer menempel di bawah
+ * dengan Drag Handle Pill & Tombol Full-Width Thumb-Friendly
+ * ======================================================== */
+@media (max-width: 767px) {
+  .TUXModal-overlay .TUXModal:not(:has(div[data-tt="components_Modal_Container"])),
+  .TUXModal-overlay [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+  div[data-tt*="components_Modal_Overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+  div[class*="Modal-overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"])),
+  div[data-tt="components_Modal_Container"].css-ee0r8k,
+  div[data-tt="components_Modal_Container"]:has(> div[data-tt="components_Modal_ButtonContainer"]),
+  div[data-tt="components_Modal_Container"]:has(> [data-tt="components_Modal_TUXModalTitle"]),
+  div[data-tt="components_Modal_Container"]:has(> ._TUXModalTitle),
+  div[data-tt="components_Modal_Container"]:has([class*="cover"]),
+  .common-modal,
+  .common-modal-confirm-modal,
+  div[class*="confirm-modal"],
+  div[class*="ConfirmModal"],
+  div[class*="delete-modal"],
+  .pickerModal-e479j7,
+  div[class*="pickerModal"],
+  div[class*="cover-modal"],
+  div[class*="edit-cover-modal"],
+  .m3-drawer {
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+    max-height: 86vh !important;
+    margin: 0 !important;
+    padding: 12px 20px calc(24px + env(safe-area-inset-bottom, 0px)) 20px !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.72) !important;
+    animation: m3-drawer-slide-up 0.24s cubic-bezier(0.1, 0.9, 0.2, 1) !important;
+  }
+
+  /* Sound Picker sebagai Drawer penuh di Mobile (dengan internal scroll list) */
+  .pickerModal-e479j7,
+  div[class*="pickerModal"],
+  .TUXModal-overlay > .TUXModal:has(.MusicPickerView__root),
+  .TUXModal-overlay > div[role="dialog"]:has(.MusicPickerView__root) {
+    height: 82vh !important;
+    max-height: 86vh !important;
+    padding: 0 0 env(safe-area-inset-bottom, 0px) 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Quality Checker Modal sebagai Bottom Sheet Drawer di Mobile */
+  #fish-quality-modal-overlay {
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding: 0 !important;
+  }
+
+  #fish-quality-modal {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 100% !important;
+    max-height: 88vh !important;
+    margin: 0 !important;
+    padding: 12px 18px calc(24px + env(safe-area-inset-bottom, 0px)) 18px !important;
+    border-radius: 28px 28px 0 0 !important;
+    border-bottom: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    overflow-y: auto !important;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.72) !important;
+    animation: m3-drawer-slide-up 0.24s cubic-bezier(0.1, 0.9, 0.2, 1) !important;
+  }
+
+  /* Material 3 Drag Handle Indicator di atas SEMUA Mobile Drawer */
+  .TUXModal-overlay .TUXModal:not(:has(div[data-tt="components_Modal_Container"]))::before,
+  .TUXModal-overlay [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"]))::before,
+  div[data-tt*="components_Modal_Overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"]))::before,
+  div[class*="Modal-overlay"] [role="dialog"]:not(:has(div[data-tt="components_Modal_Container"]))::before,
+  div[data-tt="components_Modal_Container"].css-ee0r8k::before,
+  div[data-tt="components_Modal_Container"]:has(> div[data-tt="components_Modal_ButtonContainer"])::before,
+  div[data-tt="components_Modal_Container"]:has(> [data-tt="components_Modal_TUXModalTitle"])::before,
+  div[data-tt="components_Modal_Container"]:has(> ._TUXModalTitle)::before,
+  div[data-tt="components_Modal_Container"]:has([class*="cover"])::before,
+  .common-modal::before,
+  .common-modal-confirm-modal::before,
+  div[class*="confirm-modal"]::before,
+  div[class*="ConfirmModal"]::before,
+  div[class*="delete-modal"]::before,
+  .pickerModal-e479j7::before,
+  div[class*="pickerModal"]::before,
+  div[class*="cover-modal"]::before,
+  div[class*="edit-cover-modal"]::before,
+  #fish-quality-modal::before,
+  .m3-drawer::before {
+    content: "" !important;
+    display: block !important;
+    width: 36px !important;
+    height: 4px !important;
+    background-color: rgba(163, 219, 167, 0.35) !important;
+    border-radius: 9999px !important;
+    margin: 2px auto 14px auto !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Sound Picker drag handle margin khusus karena padding container 0 */
+  .pickerModal-e479j7::before,
+  div[class*="pickerModal"]::before,
+  .TUXModal-overlay > .TUXModal:has(.MusicPickerView__root)::before,
+  .TUXModal-overlay > div[role="dialog"]:has(.MusicPickerView__root)::before {
+    margin: 10px auto 4px auto !important;
+  }
+
+  /* Tombol di HP tersusun rapi & lebar penuh agar mudah disentuh */
+  .common-modal-footer,
+  div[data-tt*="ButtonContainer"],
+  div[class*="ModalFooter"] {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    gap: 10px !important;
+    margin-top: 20px !important;
+  }
+
+  .common-modal-footer .TUXButton,
+  .common-modal-footer .Button__root,
+  .common-modal-footer button,
+  div[data-tt*="ButtonContainer"] button,
+  div[data-tt="components_Modal_FlexItem"] {
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+}
+
+/* --------------------------------------------------------
+ * Konten di dalam Modal / Pop-up agar Proporsional & Rapi
+ * (Mencegah banner / icon kebesaran seperti AI content popup)
+ * -------------------------------------------------------- */
+.common-modal-body {
+  padding: 0 !important;
+  max-width: 100% !important;
+}
+
+/* Banner Ilustrasi di dalam Modal */
+.common-modal img.banner,
+.common-modal .banner,
+.TUXModal img.banner,
+.TUXModal .banner {
+  max-height: 110px !important;
+  width: auto !important;
+  max-width: 100% !important;
+  object-fit: contain !important;
+  margin: 0 auto 12px auto !important;
+  display: block !important;
+  border-radius: 12px !important;
+}
+
+/* Judul Modal (H2) */
+.common-modal .modal-content h2,
+.TUXModal .modal-content h2,
+.common-modal-header h2,
+.common-modal h2 {
+  font-size: 18px !important;
+  line-height: 1.3 !important;
+  margin-bottom: 12px !important;
+  color: var(--m3-text-primary) !important;
+  font-weight: 700 !important;
+}
+
+/* Poin-poin Penjelasan (Bullet list di dalam modal) */
+.modal-bullet,
+div[class*="modal-bullet"] {
+  display: flex !important;
+  gap: 12px !important;
+  margin-bottom: 12px !important;
+  align-items: flex-start !important;
+}
+
+/* Icon SVG di dalam Bullet — perkecil dari 40px ke 22px yang pas */
+.modal-bullet svg,
+div[class*="modal-bullet"] svg {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  max-height: 22px !important;
+  font-size: 22px !important;
+  color: var(--m3-primary) !important;
+  fill: var(--m3-primary) !important;
+  flex-shrink: 0 !important;
+  margin-top: 2px !important;
+}
+
+/* Teks di dalam Bullet */
+.modal-bullet span,
+.modal-bullet div,
+div[class*="modal-bullet"] span {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  color: var(--m3-text-secondary) !important;
+}
+
+/* Link Panduan Komunitas di dalam Bullet */
+.modal-bullet a,
+.modal-bullet span[style*="cursor: pointer"] {
+  color: var(--m3-primary) !important;
+  text-decoration: underline !important;
+}
+
+/* Tombol di dalam Modal Footer */
+.common-modal-footer .Button__root {
+  height: 40px !important;
+  min-height: 40px !important;
+  border-radius: 9999px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+}
+
+.common-modal-footer .Button__root--type-primary {
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  border: none !important;
+}
+
+.common-modal-footer .Button__root--type-neutral {
+  background-color: var(--m3-surface-container-high) !important;
+  color: var(--m3-text-primary) !important;
+  border: 1px solid var(--m3-outline) !important;
+}

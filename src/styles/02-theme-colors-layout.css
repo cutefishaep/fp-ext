@@ -1,0 +1,152 @@
+/* ========================================================
+ * 2. Material 3 Green Tea — Color Variables & Overrides
+ * ======================================================== */
+
+:root,
+html[data-tux-color-scheme="dark"],
+html,
+body {
+  /* M3 Surface & Backgrounds (Matcha Slate Dark) */
+  --m3-bg: #111512;
+  /* Background terdalam (Clean Deep Charcoal) */
+  --m3-surface: #171c18;
+  /* Surface dasar */
+  --m3-surface-container: #1d241f;
+  /* Kartu / Container */
+  --m3-surface-container-high: #242c26;
+  /* Input, Field, Dropdown */
+  --m3-surface-container-highest: #2e3931;
+  /* Chip, Toolbar, Hovered item */
+
+  /* M3 Green Tea Primary Accent */
+  --m3-primary: #a3dba7;
+  /* Green Tea / Matcha terang */
+  --m3-primary-hover: #baf0be;
+  --m3-on-primary: #053311;
+  /* Teks di atas warna primary */
+  --m3-primary-container: #1b4d24;
+  /* Active Tab, Accent badge */
+  --m3-on-primary-container: #c4f7c8;
+
+  /* M3 Secondary & Sage */
+  --m3-secondary: #c2d4c3;
+  --m3-secondary-container: #2b3d2f;
+
+  /* M3 Teks & Tipografi (Kontras Tinggi & Bersih) */
+  --m3-text-primary: #f2f7f2;
+  /* Teks utama (putih lembut kontras tinggi) */
+  --m3-text-secondary: #bdccbe;
+  /* Teks sekunder / label (jelas terbaca) */
+  --m3-text-muted: #8a9e8c;
+  /* Teks redup / placeholder (terang, tidak hitam) */
+
+  /* M3 Garis Batas (Outlines Bersih) */
+  --m3-outline: #3b493e;
+  /* Border kartu dan input */
+  --m3-outline-variant: #2b362e;
+  /* Divider pembatas tipis */
+
+  /* Override TikTok TUX & UI Variables (lowercase + uppercase yang dipakai TUX/Studio) */
+  --ui-text-1: #f2f7f2 !important;
+  --ui-text-2: #bdccbe !important;
+  --ui-text-3: #8a9e8c !important;
+  --ui-text-placeholder: #8a9e8c !important;
+  --ui-bg-1: #171c18 !important;
+  --ui-bg-2: #1d241f !important;
+  --ui-border-1: #3b493e !important;
+  --ui-border-2: #2b362e !important;
+  --ui-brand: #a3dba7 !important;
+  --UI-Text-1: #f2f7f2 !important;
+  --UI-Text-2: #bdccbe !important;
+  --UI-Text-3: #8a9e8c !important;
+  --UI-Text-Placeholder: #8a9e8c !important;
+  --UI-BG-1: #171c18 !important;
+  --UI-BG-2: #1d241f !important;
+  --UI-Border-1: #3b493e !important;
+  --UI-Border-2: #2b362e !important;
+  --UI-Brand: #a3dba7 !important;
+  --ui-shape-neutral-4: rgba(163, 219, 167, 0.1) !important;
+  --tux-colorLineSecondary: rgba(163, 219, 167, 0.18) !important;
+  --tux-colorConstTextInverse: #053311 !important;
+}
+
+
+/* ========================================================
+ * 3. Layout Responsif & Perbaikan Tampilan Kosong
+ * ======================================================== */
+
+/* Mencegah #root dan html memaksa min-width 1280px & Bebas Height Lock agar konten tidak terpotong */
+html {
+  overflow-x: clip !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  background-color: var(--m3-bg) !important;
+}
+
+body {
+  overflow-x: clip !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  background-color: var(--m3-bg) !important;
+  color: var(--m3-text-primary) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+#root {
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  min-height: 100vh !important;
+  overflow-x: clip !important;
+  background-color: var(--m3-bg) !important;
+  color: var(--m3-text-primary) !important;
+}
+
+/* Flex Row Utama: Biarkan anak konten mengambil 100% lebar & Hilangkan background putih/lightgray bawaan TikTok */
+[data-tt="PageContainer_NewPageContainer_FlexRow"],
+.css-1igqfns {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  background: var(--m3-bg) !important;
+  background-color: var(--m3-bg) !important;
+}
+
+/* Target KHUSUS SubPageContainer (konten utama) agar selalu meregang 100% dan tersusun vertikal lurus */
+[data-tt="PageContainer_NewPageContainer_SubPageContainer"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  background-color: var(--m3-bg) !important;
+}
+
+/* Seluruh container konten di dalam SubPageContainer dibuat fluid */
+[data-tt="PageContainer_NewPageContainer_FlexColumn"],
+.main-body,
+.page-loading-wrapper,
+.page-loading-content,
+[class*="layout"],
+.Tabs__content,
+.Tabs__panel,
+.root-Svl6yE {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  background-color: var(--m3-bg) !important;
+}
+
+/* Gambar dan SVG fluid */
+img,
+video,
+canvas,
+svg {
+  max-width: 100% !important;
+}

@@ -1,0 +1,52 @@
+/* ========================================================
+ * 1. Elemen Pengganggu yang Disembunyikan
+ * ======================================================== */
+
+/* Banner Promo Smart Split ("1 long video, multiple viral clips") */
+.jsx-1195011304.container-new,
+div[class*="container-new"] {
+  display: none !important;
+}
+
+/* Panel Rekomendasi / Spek Video */
+.jsx-2094875959.video-suggestion,
+div[class*="video-suggestion"],
+div[class*="video-sgt-items"] {
+  display: none !important;
+}
+
+/* Panel Info Spek Foto */
+.root-U7qACv,
+div[class*="root-"]:has(> div[class*="item-akZfoU"]),
+div[class*="item-akZfoU"] {
+  display: none !important;
+}
+
+/* Promo Card CapCut Online (HANYA kartu dengan tombol CapCut) */
+div[class*="card"]:has(.cc_entrance_btn) {
+  display: none !important;
+}
+
+/* Sidebar & Header TikTok Studio */
+[data-tt="Sidebar_Sidebar_FlexRow"],
+[data-tt="Header_NewHeader_FlexRow"]:not(.TUXMenu [data-tt="Header_NewHeader_FlexRow"]):not(.TUXMenuItem [data-tt="Header_NewHeader_FlexRow"]),
+[data-tt="Header_NewHeader_FlexRow_3"],
+[data-tt="Sidebar_Sidebar_FlexColumn"],
+[data-tt="Sidebar_Sidebar_FlexCenter"]:has([data-tt="Sidebar_Sidebar_a"]),
+[data-tt="Sidebar_Sidebar_SidebarContainer"],
+/* Wrapper sidebar & header di dalam FlexRow agar tidak memakan ruang 100% kosong */
+[data-tt="PageContainer_NewPageContainer_FlexItem"]:has([data-tt*="Sidebar"]),
+[data-tt="PageContainer_NewPageContainer_FlexItem"]:has([data-tt*="Header"]) {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 0 0 0px !important;
+}
+
+

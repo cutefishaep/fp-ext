@@ -1,0 +1,124 @@
+/* ========================================================
+ * 23. Selected Sound / Audio Card di Form Postingan
+ * ======================================================== */
+.root-JYO1jb,
+div[class*="root-JYO1jb"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 16px !important;
+  padding: 10px 14px !important;
+  gap: 12px !important;
+  box-shadow: none !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.root-JYO1jb:hover,
+div[class*="root-JYO1jb"]:hover {
+  border-color: var(--m3-primary) !important;
+  background-color: var(--m3-surface-container-highest) !important;
+}
+
+.musicInfo-argrST,
+div[class*="musicInfo-"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+.cover-zpHazH,
+img[class*="cover-zpHazH"] {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 10px !important;
+  object-fit: cover !important;
+  flex-shrink: 0 !important;
+}
+
+.titleWrapper-GybbsQ,
+div[class*="titleWrapper-"] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.title-l_5NCH,
+span[class*="title-l_5NCH"] {
+  color: var(--m3-text-primary) !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.desc-rO7lMH,
+span[class*="desc-rO7lMH"] {
+  color: var(--m3-text-secondary) !important;
+  font-size: 12px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.actionWrapper-nnBTWG,
+div[class*="actionWrapper-"] {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Tombol Hapus Sound (Trash / Backspace icon) */
+.actionWrapper-nnBTWG button[data-icon-only="true"],
+.actionWrapper-nnBTWG button:has(svg) {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background-color: var(--m3-surface-container) !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-text-secondary) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.actionWrapper-nnBTWG button[data-icon-only="true"]:hover,
+.actionWrapper-nnBTWG button:has(svg):hover {
+  background-color: rgba(255, 180, 171, 0.15) !important;
+  border-color: #ffb4ab !important;
+  color: #ffb4ab !important;
+}
+
+/* Tombol "Replace" Sound */
+.actionWrapper-nnBTWG button:not([data-icon-only="true"]) {
+  height: 34px !important;
+  border-radius: 9999px !important;
+  background-color: var(--m3-surface-container) !important;
+  border: 1px solid var(--m3-outline) !important;
+  color: var(--m3-text-primary) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 0 16px !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer !important;
+}
+
+.actionWrapper-nnBTWG button:not([data-icon-only="true"]):hover {
+  background-color: var(--m3-surface-container-highest) !important;
+  border-color: var(--m3-primary) !important;
+  color: var(--m3-primary) !important;
+}
+
+

@@ -1,0 +1,226 @@
+#!/usr/bin/env node
+/**
+ * Fish Acceleration — build script (zero dependencies)
+ *
+ * 1. Bundles source parts and local MP4 engines into runtime extension files:
+ *
+ *      src/content/*.js + asset/engines/soundsafe-hook.js -> src/content.js   (MAIN world)
+ *      src/isolated/*.js + asset/engines/{patch,sl-sr}.js -> src/isolated.js  (ISOLATED world)
+ *      src/styles/*.css                                   -> src/content.css  (content CSS)
+ *
+ * 2. Validates JavaScript syntax of all generated bundles & background.js.
+ *
+ * 3. Packs the loadable extension (manifest, content.js, isolated.js,
+ *    background.js, content.css, rules.json, icons/) into
+ *    build/<name>-v<version>.zip — ready for Chrome Web Store or sharing.
+ *
+ * Usage:  node build.mjs
+ * Then reload the extension at chrome://extensions.
+ *
+ * NOTE: src/content.js, src/isolated.js, and src/content.css are GENERATED files.
+ */
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { deflateRawSync } from 'node:zlib';
+import vm from 'node:vm';
+
+const root = dirname(fileURLToPath(import.meta.url));
+
+function checkJsSyntax(code, label) {
+  new vm.Script(code, { filename: label });
+}
+
+function writeAndReport(outFile, out, partCount, validateJs = false) {
+  if (validateJs) checkJsSyntax(out, outFile);
+  writeFileSync(join(root, outFile), out, 'utf8');
+  const kb = (Buffer.byteLength(out) / 1024).toFixed(1);
+  console.log(`✓ ${outFile.padEnd(16)} ${String(partCount).padStart(2)} parts  ${kb.padStart(8)} KB`);
+}
+
+function buildContentJs() {
+  const dir = join(root, 'src/content');
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith('.js') && !f.startsWith('.'))
+    .sort();
+  if (files.length === 0) throw new Error('No .js parts found in src/content/');
+
+  const chunks = [];
+  let soundsafeBundled = false;
+  for (const f of files) {
+    if (f.startsWith('11-') && !soundsafeBundled) {
+      chunks.push(readFileSync(join(root, 'asset/engines/soundsafe-hook.js'), 'utf8') + '\n');
+      soundsafeBundled = true;
+    }
+    chunks.push(readFileSync(join(dir, f), 'utf8'));
+  }
+  if (!soundsafeBundled) {
+    chunks.push(readFileSync(join(root, 'asset/engines/soundsafe-hook.js'), 'utf8'));
+  }
+
+  writeAndReport('src/content.js', chunks.join(''), files.length + 1, true);
+}
+
+function buildIsolatedJs() {
+  const dir = join(root, 'src/isolated');
+  const files = readdirSync(dir)
+    .filter((f) => f.endsWith('.js') && !f.startsWith('.'))
+    .sort();
+  if (files.length === 0) throw new Error('No .js parts found in src/isolated/');
+
+  const chunks = [];
+  let enginesBundled = false;
+  for (const f of files) {
+    chunks.push(readFileSync(join(dir, f), 'utf8'));
+    if (f.startsWith('00-') && !enginesBundled) {
+      chunks.push('\n' + readFileSync(join(root, 'asset/engines/patch.js'), 'utf8') + '\n');
+      chunks.push(readFileSync(join(root, 'asset/engines/sl-sr.js'), 'utf8') + '\n');
+      enginesBundled = true;
+    }
+  }
+  if (!enginesBundled) {
+    throw new Error('Expected 00-header.js in src/isolated/ to wrap bundled engines.');
+  }
+
+  writeAndReport('src/isolated.js', chunks.join(''), files.length + 2, true);
+}
+
+function concatCss() {
+  const abs = join(root, 'src/styles');
+  const files = readdirSync(abs)
+    .filter((f) => f.endsWith('.css') && !f.startsWith('.'))
+    .sort();
+  if (files.length === 0) throw new Error('No .css parts found in src/styles/');
+  const out = files.map((f) => readFileSync(join(abs, f), 'utf8')).join('');
+  writeAndReport('src/content.css', out, files.length, false);
+}
+
+// ---------------------------------------------------------------------------
+// Minimal ZIP writer (store + deflate, no data descriptor, UTF-8-safe names)
+// ---------------------------------------------------------------------------
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[n] = c >>> 0;
+  }
+  return t;
+})();
+
+function crc32(buf) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function dosDateTime(d) {
+  const time = (d.getHours() << 11) | (d.getMinutes() << 5) | Math.floor(d.getSeconds() / 2);
+  const date = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  return { time, date };
+}
+
+function createZip(files) {
+  const { time, date } = dosDateTime(new Date());
+  const chunks = [];
+  const central = [];
+  let offset = 0;
+
+  for (const f of files) {
+    const nameBuf = Buffer.from(f.name, 'utf8');
+    const crc = crc32(f.data);
+    const deflated = deflateRawSync(f.data, { level: 9 });
+    const useDeflate = deflated.length < f.data.length;
+    const method = useDeflate ? 8 : 0;
+    const payload = useDeflate ? deflated : f.data;
+
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0, 6);
+    local.writeUInt16LE(method, 8);
+    local.writeUInt16LE(time, 10);
+    local.writeUInt16LE(date, 12);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(payload.length, 18);
+    local.writeUInt32LE(f.data.length, 22);
+    local.writeUInt16LE(nameBuf.length, 26);
+    local.writeUInt16LE(0, 28);
+
+    chunks.push(local, nameBuf, payload);
+    central.push({ name: nameBuf, method, crc, csize: payload.length, usize: f.data.length, offset });
+    offset += local.length + nameBuf.length + payload.length;
+  }
+
+  const cdStart = offset;
+  for (const c of central) {
+    const e = Buffer.alloc(46);
+    e.writeUInt32LE(0x02014b50, 0);
+    e.writeUInt16LE(20, 4);
+    e.writeUInt16LE(20, 6);
+    e.writeUInt16LE(0, 8);
+    e.writeUInt16LE(c.method, 10);
+    e.writeUInt16LE(time, 12);
+    e.writeUInt16LE(date, 14);
+    e.writeUInt32LE(c.crc, 16);
+    e.writeUInt32LE(c.csize, 20);
+    e.writeUInt32LE(c.usize, 24);
+    e.writeUInt16LE(c.name.length, 28);
+    e.writeUInt32LE((0o644 << 16) >>> 0, 38);
+    e.writeUInt32LE(c.offset, 42);
+    chunks.push(e, c.name);
+    offset += e.length + c.name.length;
+  }
+  const cdSize = offset - cdStart;
+
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);
+  eocd.writeUInt16LE(central.length, 8);
+  eocd.writeUInt16LE(central.length, 10);
+  eocd.writeUInt32LE(cdSize, 12);
+  eocd.writeUInt32LE(cdStart, 16);
+  chunks.push(eocd);
+
+  return Buffer.concat(chunks);
+}
+
+function packZip() {
+  const manifest = JSON.parse(readFileSync(join(root, 'src/manifest.json'), 'utf8'));
+  const slug = String(manifest.name || 'extension')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const zipName = `${slug}-v${manifest.version}.zip`;
+
+  const outDir = join(root, 'build');
+  mkdirSync(outDir, { recursive: true });
+
+  for (const f of readdirSync(outDir)) {
+    if (new RegExp(`^${slug}-v[\\d.]+\\.zip$`).test(f) && f !== zipName) {
+      unlinkSync(join(outDir, f));
+      console.log(`- removed old ${f}`);
+    }
+  }
+
+  const runtimeFiles = ['manifest.json', 'content.js', 'isolated.js', 'background.js', 'content.css', 'rules.json'];
+  const files = runtimeFiles.map((name) => ({
+    name,
+    data: readFileSync(join(root, 'src', name))
+  }));
+
+  const iconFiles = new Set(Object.values(manifest.icons || {}));
+  for (const iconPath of iconFiles) {
+    files.push({ name: iconPath, data: readFileSync(join(root, 'src', iconPath)) });
+  }
+
+  const zipPath = join(outDir, zipName);
+  writeFileSync(zipPath, createZip(files));
+  const kb = (files.reduce((n, f) => n + f.data.length, 0) / 1024).toFixed(0);
+  console.log(`✓ build/${zipName.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB uncompressed)`);
+}
+
+console.log('Building Fish Acceleration...');
+checkJsSyntax(readFileSync(join(root, 'src/background.js'), 'utf8'), 'src/background.js');
+buildContentJs();
+buildIsolatedJs();
+concatCss();
+packZip();
+console.log('Done. Reload the extension in chrome://extensions to apply.');

@@ -1,9 +1,9 @@
-# Ignore all files and directories by default
-/*
+# Build output & local backups
+build/
+.backup/
 
-# Whitelist asset/ and all contents
-!/asset/
-!/asset/**
-
-# Whitelist .gitignore
-!.gitignore
+# OS / Editor / Dependencies
+node_modules/
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,93 @@
+/* ========================================================
+ * 15. QR Code Popover Menu (Preview on Phone)
+ * ======================================================== */
+.Dropdown__content:has(.qr-code-panel),
+.Dropdown__content:has([class*="qr-code"]) {
+  background-color: var(--m3-surface-container-high) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 18px !important;
+  padding: 16px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55) !important;
+  color: var(--m3-text-primary) !important;
+}
+
+.qr-code-panel,
+div[class*="qr-code-panel"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  gap: 12px !important;
+}
+
+.qr-code-panel .header .title,
+div[class*="qr-code-panel"] .title {
+  color: var(--m3-text-primary) !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+.qr-code-panel .header .desc,
+div[class*="qr-code-panel"] .desc {
+  color: var(--m3-text-secondary) !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  margin-top: 4px !important;
+}
+
+.qr-code-wrapper,
+div[class*="qr-code-wrapper"] {
+  background-color: #ffffff !important;
+  border-radius: 12px !important;
+  padding: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.qr-code-panel .footer .desc,
+div[class*="qr-code-panel"] .footer .desc {
+  color: var(--m3-text-muted) !important;
+  font-size: 12px !important;
+  text-align: center !important;
+}
+
+
+/* ========================================================
+ * 16. Audience Controls Dialog & Panduan Komunitas
+ * ======================================================== */
+.Dialog__title,
+div[id*="Dialog__title"],
+div[class*="Dialog__title"] {
+  color: var(--m3-text-primary) !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin-bottom: 8px !important;
+}
+
+.modalDescription-w5jGKr,
+div[class*="modalDescription"],
+p[class*="modalDescription"] {
+  color: var(--m3-text-secondary) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+.communityGuidelines-waQ30l,
+a[class*="communityGuidelines"],
+.modalDescription-w5jGKr a {
+  color: var(--m3-primary) !important;
+  font-weight: 600 !important;
+  text-decoration: underline !important;
+  transition: color 0.15s ease !important;
+}
+
+.communityGuidelines-waQ30l:hover,
+a[class*="communityGuidelines"]:hover {
+  color: var(--m3-primary-hover) !important;
+}
+
+

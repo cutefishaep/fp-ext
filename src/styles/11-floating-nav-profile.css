@@ -1,0 +1,233 @@
+/* ========================================================
+ * 12. Material 3 Floating Navigation Bar & Profile Popover
+ * ======================================================== */
+
+/* Ruang kosong di bagian bawah konten agar tidak tertutup nav melayang (hanya di akhir dokumen, jangan mengunci tinggi viewport) */
+.main-body,
+.jsx-1566941760.footer,
+div[class*="footer"]:has(.button-group) {
+  height: auto !important;
+  overflow: visible !important;
+  padding-bottom: 96px !important;
+}
+
+.page-loading-wrapper,
+.page-loading-content {
+  height: auto !important;
+  overflow: visible !important;
+  padding-bottom: 0 !important;
+}
+
+/* Pastikan dropzone dan panel tidak tertimpa padding bawah ganda */
+.upload-stage-container,
+.upload-stage-wrap,
+.upload-text-container,
+.Tabs__panel {
+  padding-bottom: 0 !important;
+}
+
+/* Floating Bottom Navigation Bar Container */
+#m3-floating-nav,
+.m3-floating-nav {
+  position: fixed !important;
+  bottom: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: var(--m3-surface-container) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 9999px !important;
+  padding: 6px 14px !important;
+  gap: 8px !important;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5) !important;
+  z-index: 10000 !important;
+  user-select: none !important;
+  max-width: 94vw !important;
+  backdrop-filter: none !important;
+}
+
+/* Nav Item Button */
+.m3-nav-item {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 4px 10px !important;
+  border-radius: 16px !important;
+  color: var(--m3-text-secondary) !important;
+  font-family: inherit !important;
+  transition: color 0.15s ease !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.m3-nav-item:hover {
+  color: var(--m3-text-primary) !important;
+}
+
+/* Material 3 Active Indicator Pill */
+.m3-nav-indicator {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 48px !important;
+  height: 28px !important;
+  border-radius: 14px !important;
+  color: inherit !important;
+  transition: background-color 0.18s cubic-bezier(0.2, 0, 0, 1), color 0.18s ease !important;
+}
+
+.m3-nav-item.active .m3-nav-indicator {
+  background-color: var(--m3-primary-container) !important;
+  color: var(--m3-on-primary-container) !important;
+}
+
+.m3-nav-item.active .m3-nav-indicator svg {
+  color: var(--m3-on-primary-container) !important;
+}
+
+/* Nav Item Label */
+.m3-nav-label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  margin-top: 3px !important;
+  letter-spacing: 0.2px !important;
+  color: inherit !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+.m3-nav-item.active .m3-nav-label {
+  color: var(--m3-text-primary) !important;
+  font-weight: 600 !important;
+}
+
+/* Center Upload "+" FAB (Floating Action Button) */
+.m3-nav-fab {
+  padding: 0 4px !important;
+}
+
+.m3-nav-fab-inner {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 16px !important;
+  background-color: var(--m3-primary) !important;
+  color: var(--m3-on-primary) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 4px 14px rgba(163, 219, 167, 0.35) !important;
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease !important;
+}
+
+.m3-nav-fab:hover .m3-nav-fab-inner {
+  transform: scale(1.06) !important;
+  background-color: var(--m3-primary-hover) !important;
+}
+
+.m3-nav-fab:active .m3-nav-fab-inner {
+  transform: scale(0.96) !important;
+}
+
+/* Profile Avatar / Icon */
+.m3-nav-avatar {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  border: 1px solid var(--m3-outline) !important;
+}
+
+/* --- Profile Popover Menu (TUXMenu) Styling --- */
+[data-tt="Header_NewHeader_TUXMenu"],
+.TUXPopover-popover:has(.TUXMenu) {
+  position: fixed !important;
+  top: auto !important;
+  bottom: 84px !important;
+  left: auto !important;
+  right: max(16px, calc(50% - 200px)) !important;
+  transform: none !important;
+  z-index: 99999 !important;
+  background-color: var(--m3-surface-container) !important;
+  border: 1px solid var(--m3-outline) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55) !important;
+  overflow: hidden !important;
+  padding: 6px !important;
+  min-width: 210px !important;
+  animation: m3PopIn 0.18s cubic-bezier(0.1, 0.9, 0.2, 1) !important;
+  transform-origin: bottom right !important;
+}
+
+.TUXMenu {
+  background: transparent !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+.TUXMenu [data-tt="Header_NewHeader_FlexRow"],
+.TUXMenuItem [data-tt="Header_NewHeader_FlexRow"] {
+  display: flex !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: auto !important;
+  max-width: none !important;
+  flex: 1 1 auto !important;
+  align-items: center !important;
+  gap: 6px !important;
+  color: inherit !important;
+}
+
+.TUXMenuItem {
+  color: var(--m3-text-primary) !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: background-color 0.15s ease !important;
+  text-decoration: none !important;
+}
+
+.TUXMenuItem:hover,
+.TUXMenuItem:focus {
+  background-color: var(--m3-surface-container-highest) !important;
+  color: var(--m3-primary) !important;
+}
+
+.TUXMenuItem-leadingIcon svg {
+  color: var(--m3-primary) !important;
+}
+
+.TUXMenuItem-label {
+  color: inherit !important;
+  font-weight: 500 !important;
+}
+
+/* Responsif Mobile untuk Layar Ekstra Sempit (< 380px) */
+@media (max-width: 380px) {
+  #m3-floating-nav,
+  .m3-floating-nav {
+    padding: 4px 8px !important;
+    gap: 4px !important;
+    bottom: 12px !important;
+  }
+  .m3-nav-indicator {
+    width: 40px !important;
+    height: 26px !important;
+  }
+  .m3-nav-label {
+    font-size: 10px !important;
+  }
+  .m3-nav-fab-inner {
+    width: 42px !important;
+    height: 42px !important;
+  }
+}
+
+

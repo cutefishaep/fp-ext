@@ -1,0 +1,1388 @@
+/* ========================================================
+ * 28. Post / Content Page Material 3 Custom Card Grid
+ *
+ * Struktur Kartu Sesuai Permintaan:
+ *           [thumbnail]
+ * [views] [love] [Comment] < langsung angka
+ * [icon manusia material 3] [icon settings material 3] < tombol untuk settings
+ * ======================================================== */
+
+/* Sembunyikan Header Tabel Kaku & Container Header */
+div.css-hvkpcx > div:first-child,
+div.css-ob0og1[data-tt="components_RowLayout_FlexRow"] {
+  display: none !important;
+}
+
+/* Container Pembungkus Halaman & Tabel Post (Isi ruang penuh tanpa batasan tinggi/overflow clipping) */
+div.css-hvkpcx,
+div.css-mae3oz,
+div.css-1t5uzud,
+div.css-1xdux7e,
+div[data-tt="components_PostTable_FlexColumn"],
+div[data-tt="components_PostPage_FlexColumn"],
+div[data-tt="Content_ContentPage_FlexColumn"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+div[data-tt="Content_ContentPage_FlexColumn"] {
+  padding-bottom: 0 !important;
+}
+
+div[data-tt="Content_ContentPage_ResponsivePageMarginContainer"] {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  padding-bottom: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Scroller Utama Post Table: Mengisi ruang penuh sampai tepi bawah layar tanpa bar kosong */
+div.css-snthx,
+div[data-tt="components_PostTable_Container"]:has(> div[data-tt="components_PostTable_Container"]) {
+  display: block !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  padding-bottom: 0 !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Grid Pos di Dalam Scroller (padding bawah 110px hanya muncul saat scroll sampai paling bawah) */
+div.css-vyvp0j,
+div[data-tt="components_PostTable_Container"] > div[data-tt="components_PostTable_Container"] {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  grid-auto-rows: max-content !important;
+  align-items: start !important;
+  gap: 16px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: auto !important;
+  padding: 8px 16px 110px 16px !important;
+  box-sizing: border-box !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 600px) {
+  div.css-vyvp0j,
+  div[data-tt="components_PostTable_Container"] > div[data-tt="components_PostTable_Container"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    padding: 4px 2px 110px 2px !important;
+  }
+}
+
+@media (max-width: 340px) {
+  div.css-vyvp0j,
+  div[data-tt="components_PostTable_Container"] > div[data-tt="components_PostTable_Container"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+/* Reset Virtual List Item Wrapper + Lewati layout/paint kartu offscreen via content-visibility */
+div[data-tt="components_PostTable_Absolute"] {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  transform: none !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  content-visibility: auto !important;
+  contain-intrinsic-size: auto 340px !important;
+  contain: layout style paint !important;
+}
+
+/* Sembunyikan item non-video (sentinel, empty spacer, phantom elements) agar tidak menjadi kartu kosong di grid */
+div[data-tt="components_PostTable_Absolute"]:empty,
+div[data-tt="components_PostTable_Container"] > div[data-tt="components_PostTable_Container"] > div:empty {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Hapus garis divider di tiap atas post */
+div[data-tt="components_PostTable_div"],
+div[data-tt="components_PostTable_Spacer"],
+div.css-vpagc5.edss2sz2 {
+  display: none !important;
+  height: 0 !important;
+  border: none !important;
+  outline: none !important;
+}
+
+/* Anti Kotak Putih: Paksa semua skeleton / placeholder di Post Table menjadi Dark Matcha */
+div[data-tt="components_PostTable_Container"] [class*="skeleton"],
+div[data-tt="components_PostTable_Container"] [class*="Skeleton"],
+div[data-tt="components_PostTable_Container"] [class*="placeholder"],
+div[data-tt="components_PostTable_Container"] [data-tt*="Skeleton"],
+div[data-tt="components_PostTable_Container"] [data-tt*="Loading"] {
+  background-color: #161b17 !important;
+  background: #161b17 !important;
+  border-radius: 14px !important;
+}
+
+/* Kartu Postingan Mandiri (Flat Dark Material 3) */
+div.css-153feq8[data-tt="components_RowLayout_FlexRow"],
+div[data-tt="components_RowLayout_FlexRow"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  position: relative !important;
+  background: #161b17 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  padding: 10px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  gap: 8px !important;
+  box-shadow: none !important;
+  contain: layout style;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  div.css-153feq8[data-tt="components_RowLayout_FlexRow"]:hover,
+  div[data-tt="components_RowLayout_FlexRow"]:hover {
+    border-color: rgba(163, 219, 167, 0.32) !important;
+  }
+}
+
+/* Reset Override Selector Lama */
+div[data-tt="components_RowLayout_FlexRow_2"],
+div.css-5lqean.edss2sz9 {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  width: 100% !important;
+  flex: 0 0 auto !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* --- 1. [THUMBNAIL] (Row 1 - Full Width & Proporsional 3:4) --- */
+div[data-tt="components_RowLayout_FlexRow_2"] {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+div[data-tt="components_PostInfoCell_FlexRow"] {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  flex: 0 0 auto !important;
+  position: relative !important;
+}
+
+div[data-tt="components_PostInfoCell_FlexItem"] {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
+/* Video Cover HANYA di Post / Content Table (Grid Post) */
+div[data-tt="components_PostTable_Container"] div[data-tt="VideoCover_index_VideoCoverContainer"],
+div[data-tt="components_RowLayout_FlexRow"] div[data-tt="VideoCover_index_VideoCoverContainer"] {
+  width: 100% !important;
+  aspect-ratio: 3 / 4 !important;
+  height: auto !important;
+  max-height: 260px !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  background: #0d120e !important;
+  cursor: pointer !important;
+}
+
+div[data-tt="components_PostTable_Container"] div[data-tt="VideoCover_index_VideoCoverContainer"] img,
+div[data-tt="components_RowLayout_FlexRow"] div[data-tt="VideoCover_index_VideoCoverContainer"] img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Video Cover & Layout di Halaman Home (Recent Posts & Latest Comments) - FIX RAKURSI & TEKS VERTIKAL */
+div[data-tt*="RecentPosts"] div[data-tt="VideoCover_index_VideoCoverContainer"],
+div[data-tt*="RecentPostsCard"] div[data-tt="VideoCover_index_VideoCoverContainer"],
+div.css-36yn3w div[data-tt="VideoCover_index_VideoCoverContainer"],
+[data-tt*="NewHome_RecentPostsCard"] div[data-tt="VideoCover_index_VideoCoverContainer"] {
+  width: 60px !important;
+  min-width: 60px !important;
+  max-width: 60px !important;
+  height: 80px !important;
+  aspect-ratio: 3 / 4 !important;
+  flex: 0 0 60px !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+/* Item Baris Recent Posts di Home: Flex row lurus, teks judul fleksibel, stat di kanan */
+div[data-tt*="RecentPostsCard_FlexRow"],
+div.css-36yn3w {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Kolom Teks Judul & Tanggal di Recent Posts: Jangan pernah terlipat vertikal per karakter */
+div[data-tt*="RecentPostsCard_FlexColumn"],
+div.css-1jm2by4 {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+div[data-tt*="RecentPostsCard_FlexColumn"] span,
+div.css-1jm2by4 span {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+  display: block !important;
+}
+
+/* ========================================================
+ * Latest comments di Home — Layout Presisi Bebas Rusak
+ * ======================================================== */
+div[data-tt="NewHome_LatestCommentsCard_FlexRow"],
+div.css-hy6j4 {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  width: 100% !important;
+  padding: 8px 0 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Container Avatar + Teks Komentar (Bebas Width 532px Kaku) */
+div[data-tt="NewHome_LatestCommentsCard_FlexRow_4"],
+div.css-ejm89b {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  width: auto !important;
+  max-width: calc(100% - 56px) !important;
+}
+
+/* Kolom Teks Nama & Isi Komentar */
+div[data-tt="NewHome_LatestCommentsCard_FlexColumn"],
+div.css-ejm89b > div.css-buh4iu {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  overflow: hidden !important;
+}
+
+/* Teks Komentar: Wrap Normal, Jangan Pernah Vertikal */
+div[data-tt="NewHome_LatestCommentsCard_FlexColumn"] span,
+div.css-ejm89b > div.css-buh4iu span {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+  height: auto !important;
+  max-height: none !important;
+  line-height: 1.35 !important;
+  font-size: 13px !important;
+}
+
+/* Video Thumbnail di Samping Komentar: Ukuran Tetap 44px x 58px */
+div[data-tt="NewHome_LatestCommentsCard_FlexRow"] div[data-tt="VideoCover_index_VideoCoverContainer"],
+div.css-hy6j4 div[data-tt="VideoCover_index_VideoCoverContainer"] {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 58px !important;
+  flex: 0 0 44px !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+/* Overlay Judul Halus di Bagian Bawah Thumbnail */
+div[data-tt="components_PostInfoCell_FlexColumn"] {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  padding: 14px 8px 6px 8px !important;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 60%, transparent 100%) !important;
+  border-radius: 0 0 10px 10px !important;
+  pointer-events: none !important;
+  z-index: 5 !important;
+  box-sizing: border-box !important;
+}
+
+div[data-tt="components_PostInfoCell_FlexColumn"] span.TUXText {
+  color: #ffffff !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+div[data-tt="components_PublishStageLabel_FlexCenter"] {
+  display: none !important;
+}
+
+/* --- 2. [CONTAINER STATS & PRIVACY] (Vertikal Rapi) --- */
+div[data-tt="components_RowLayout_FlexRow_3"],
+div.css-tlecb3[data-tt="components_RowLayout_FlexRow_3"] {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 8px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+}
+
+/* Baris Stats: Views, Likes, Comments 3 Kolom Seimbang */
+div[data-tt="components_RowLayout_FlexRow_5"] {
+  order: 1 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-around !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 6px 4px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+}
+
+/* Kolom Angka (Views, Likes, Comments) */
+div[data-tt="components_RowLayout_FlexRow_6"],
+div[data-tt="components_RowLayout_FlexRow_7"],
+div[data-tt="components_RowLayout_FlexRow_8"] {
+  width: auto !important;
+  min-width: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #d1ded2 !important;
+}
+
+div[data-tt="components_RowLayout_FlexRow_6"] span,
+div[data-tt="components_RowLayout_FlexRow_7"] span,
+div[data-tt="components_RowLayout_FlexRow_8"] span {
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+/* Ikon Langsung Angka (Material 3 SVG Icons) */
+div[data-tt="components_RowLayout_FlexRow_6"] span[data-tt="components_ItemRow_TUXText"]::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-right: 4px !important;
+  vertical-align: -2px !important;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23d1ded2\"><path d=\"M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z\"/></svg>') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+div[data-tt="components_RowLayout_FlexRow_7"] span[data-tt="components_ItemRow_TUXText"]::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-right: 4px !important;
+  vertical-align: -2px !important;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23e57373\"><path d=\"M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z\"/></svg>') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+div[data-tt="components_RowLayout_FlexRow_8"] span[data-tt="components_ItemRow_TUXText"]::before {
+  content: "" !important;
+  display: inline-block !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-right: 4px !important;
+  vertical-align: -2px !important;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23d1ded2\"><path d=\"M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z\"/></svg>') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* --- 3. [TOMBOL PRIVACY & ACTIONS] (Baris Bawah Kiri ke Kanan) --- */
+div[data-tt="components_RowLayout_FlexRow_4"] {
+  order: 2 !important;
+  width: auto !important;
+  max-width: calc(100% - 38px) !important;
+  min-width: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: nowrap !important;
+}
+
+div[data-tt="components_RowLayout_FlexRow"].fish-has-check div[data-tt="components_RowLayout_FlexRow_4"] {
+  max-width: calc(100% - 102px) !important;
+}
+
+/* Tombol Text "Check" di Sebelah Tombol Settings Gear */
+.fish-check-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: 9999px !important;
+  background: rgba(163, 219, 167, 0.08) !important;
+  border: 1px solid rgba(163, 219, 167, 0.22) !important;
+  color: #a3dba7 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  outline: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+.fish-check-btn:hover {
+  background: rgba(163, 219, 167, 0.18) !important;
+  border-color: #a3dba7 !important;
+  color: #ffffff !important;
+}
+
+/* Tombol Check Quality Table Mode */
+.fish-check-quality-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  height: 26px !important;
+  padding: 0 9px !important;
+  border-radius: 9999px !important;
+  background: rgba(163, 219, 167, 0.1) !important;
+  border: 1px solid rgba(163, 219, 167, 0.25) !important;
+  color: #a3dba7 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+.fish-check-quality-btn:hover {
+  background: rgba(163, 219, 167, 0.22) !important;
+  border-color: #a3dba7 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
+.fish-check-quality-btn .fish-cq-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: inherit !important;
+}
+
+.fish-check-quality-btn .fish-cq-icon svg {
+  width: 13px !important;
+  height: 13px !important;
+  fill: currentColor !important;
+}
+
+.fish-check-quality-btn .fish-cq-text {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: inherit !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+/* Quality & Statistics Inspection Modal - Shell disatukan di 09-drawer-popup-system.css (Desktop Dialog / Mobile Drawer) */
+#fish-quality-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.72) !important;
+  z-index: 100010 !important;
+  display: flex !important;
+  box-sizing: border-box !important;
+  animation: m3-backdrop-fade-in 0.18s ease-out forwards !important;
+}
+
+#fish-quality-modal {
+  gap: 16px !important;
+  overflow-y: auto !important;
+}
+
+#fish-quality-modal::-webkit-scrollbar {
+  display: none !important;
+}
+
+.fish-qm-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  padding-bottom: 14px !important;
+}
+
+.fish-qm-title-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.fish-qm-badge-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 12px !important;
+  background: rgba(163, 219, 167, 0.12) !important;
+  border: 1px solid rgba(163, 219, 167, 0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #a3dba7 !important;
+}
+
+.fish-qm-header-texts {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+}
+
+.fish-qm-title {
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #f2f7f2 !important;
+  margin: 0 !important;
+  line-height: 1.2 !important;
+}
+
+.fish-qm-subtitle {
+  font-size: 11.5px !important;
+  color: #a3dba7 !important;
+  font-weight: 500 !important;
+  opacity: 0.85 !important;
+}
+
+/* Progress Bar & Scanning Shimmer */
+.fish-qm-progress-box {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  background: rgba(0, 0, 0, 0.28) !important;
+  border: 1px solid rgba(163, 219, 167, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  transition: all 0.3s ease !important;
+}
+
+.fish-qm-progress-bar-wrap {
+  width: 100% !important;
+  height: 6px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 9999px !important;
+  overflow: hidden !important;
+}
+
+.fish-qm-progress-bar-fill {
+  height: 100% !important;
+  background: linear-gradient(90deg, #78c67d, #a3dba7) !important;
+  border-radius: 9999px !important;
+  transition: width 0.3s ease-out !important;
+  box-shadow: 0 0 8px rgba(163, 219, 167, 0.5) !important;
+}
+
+.fish-qm-progress-status-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 11px !important;
+  color: #a3dba7 !important;
+  font-weight: 500 !important;
+}
+
+.fish-qm-shimmer {
+  display: inline-block !important;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(163, 219, 167, 0.2) 50%, rgba(255, 255, 255, 0.05) 100%) !important;
+  background-size: 200% 100% !important;
+  animation: fish-qm-shimmer-anim 1.5s infinite linear !important;
+  border-radius: 4px !important;
+  padding: 2px 6px !important;
+  color: rgba(242, 247, 242, 0.6) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+@keyframes fish-qm-shimmer-anim {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.fish-qm-close-btn {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(242, 247, 242, 0.6) !important;
+  cursor: pointer !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+.fish-qm-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #f2f7f2 !important;
+}
+
+.fish-qm-hero {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  padding: 12px 14px !important;
+}
+
+.fish-qm-cover-wrap {
+  position: relative !important;
+  width: 58px !important;
+  height: 76px !important;
+  flex-shrink: 0 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  background: #242c26 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.fish-qm-cover {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+.fish-qm-cover-ph {
+  width: 100% !important;
+  height: 100% !important;
+  background: #242c26 !important;
+}
+
+.fish-qm-duration-pill {
+  position: absolute !important;
+  bottom: 4px !important;
+  right: 4px !important;
+  background: rgba(0, 0, 0, 0.75) !important;
+  color: #f2f7f2 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 1px 4px !important;
+  border-radius: 4px !important;
+  line-height: 1.2 !important;
+}
+
+.fish-qm-hero-meta {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  overflow: hidden !important;
+  flex: 1 !important;
+}
+
+.fish-qm-author-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.fish-qm-author {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #a3dba7 !important;
+}
+
+.fish-qm-privacy-pill {
+  font-size: 10.5px !important;
+  color: rgba(242, 247, 242, 0.7) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  padding: 2px 8px !important;
+  border-radius: 9999px !important;
+}
+
+.fish-qm-caption {
+  font-size: 12px !important;
+  color: rgba(242, 247, 242, 0.85) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.fish-qm-id-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  font-size: 11px !important;
+  color: rgba(242, 247, 242, 0.5) !important;
+  cursor: pointer !important;
+  width: fit-content !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  transition: all 0.15s ease !important;
+}
+
+.fish-qm-id-pill:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #f2f7f2 !important;
+}
+
+.fish-qm-bento {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.fish-qm-card {
+  background: rgba(0, 0, 0, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+.fish-qm-card-wide {
+  grid-column: span 2 !important;
+}
+
+.fish-qm-card-label {
+  font-size: 11px !important;
+  color: rgba(242, 247, 242, 0.6) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-weight: 500 !important;
+}
+
+.fish-qm-card-label svg {
+  color: #a3dba7 !important;
+  fill: #a3dba7 !important;
+}
+
+.fish-qm-card-val {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #f2f7f2 !important;
+  letter-spacing: -0.2px !important;
+}
+
+#fish-qm-date {
+  font-size: 13.5px !important;
+  word-break: break-word !important;
+  line-height: 1.25 !important;
+}
+
+#fish-qm-region {
+  font-size: 14.5px !important;
+  word-break: break-word !important;
+}
+
+.fish-qm-card-sub {
+  font-size: 11px !important;
+  color: rgba(242, 247, 242, 0.5) !important;
+}
+
+.fish-qm-badge-custom {
+  color: #a3dba7 !important;
+  font-weight: 700 !important;
+  background: rgba(163, 219, 167, 0.14) !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(163, 219, 167, 0.3) !important;
+  display: inline-block !important;
+  font-size: 13px !important;
+  margin-top: 4px !important;
+}
+
+.fish-qm-badge-undetected {
+  color: #a3dba7 !important;
+  font-weight: 600 !important;
+  background: rgba(163, 219, 167, 0.1) !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(163, 219, 167, 0.25) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12.5px !important;
+  margin-top: 4px !important;
+}
+
+.fish-qm-badge-safe {
+  color: #a3dba7 !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12.5px !important;
+  margin-top: 4px !important;
+}
+
+.fish-qm-badge-warn {
+  color: #ffb4ab !important;
+  font-weight: 600 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12.5px !important;
+  margin-top: 4px !important;
+}
+
+.fish-qm-badge-probing {
+  color: rgba(242, 247, 242, 0.6) !important;
+  font-size: 12px !important;
+  font-style: italic !important;
+}
+
+.fish-qm-method-wrap {
+  width: 100% !important;
+  overflow-x: auto !important;
+  white-space: nowrap !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(163, 219, 167, 0.3) transparent !important;
+  margin-top: 4px !important;
+  box-sizing: border-box !important;
+}
+
+.fish-qm-method-wrap::-webkit-scrollbar {
+  height: 3px !important;
+}
+
+.fish-qm-method-wrap::-webkit-scrollbar-thumb {
+  background: rgba(163, 219, 167, 0.3) !important;
+  border-radius: 9999px !important;
+}
+
+.fish-qm-method-val {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #f2f7f2 !important;
+  display: inline-block !important;
+}
+
+.fish-qm-status-val {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  margin-top: 4px !important;
+  display: inline-block !important;
+}
+
+.fish-qm-status-val.safe {
+  color: #a3dba7 !important;
+}
+
+.fish-qm-status-val.warn {
+  color: #ffb4ab !important;
+}
+
+.fish-qm-stats-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  background: rgba(0, 0, 0, 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  padding: 8px 12px !important;
+  font-size: 11.5px !important;
+  color: rgba(242, 247, 242, 0.65) !important;
+}
+
+.fish-qm-stat-chip strong {
+  color: #f2f7f2 !important;
+}
+
+.fish-qm-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  margin-top: 4px !important;
+}
+
+.fish-qm-btn-subtle {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: rgba(242, 247, 242, 0.8) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 9999px !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  cursor: pointer !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+.fish-qm-btn-subtle:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #f2f7f2 !important;
+}
+
+.fish-qm-btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #121c13 !important;
+  background: #a3dba7 !important;
+  border: none !important;
+  border-radius: 9999px !important;
+  height: 36px !important;
+  min-width: 80px !important;
+  padding: 0 20px !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+}
+
+.fish-qm-btn-primary:hover {
+  background: #bcf2c0 !important;
+  box-shadow: 0 4px 12px rgba(163, 219, 167, 0.3) !important;
+}
+
+div[data-tt="components_RowLayout_FlexRow_4"] button[data-tt="components_PrivacyCell_TUXButton"],
+button[data-tt="components_PrivacyCell_TUXButton"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(163, 219, 167, 0.08) !important;
+  background-color: rgba(163, 219, 167, 0.08) !important;
+  border: 1px solid rgba(163, 219, 167, 0.22) !important;
+  border-radius: 9999px !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  color: #a3dba7 !important;
+  cursor: pointer !important;
+  gap: 4px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+div[data-tt="components_RowLayout_FlexRow_4"] button[data-tt="components_PrivacyCell_TUXButton"]:hover,
+button[data-tt="components_PrivacyCell_TUXButton"]:hover {
+  background: rgba(163, 219, 167, 0.16) !important;
+  background-color: rgba(163, 219, 167, 0.16) !important;
+  border-color: #a3dba7 !important;
+}
+
+/* Material 3 Person Icon */
+button[data-tt="components_PrivacyCell_TUXButton"] span.px-icon {
+  width: 16px !important;
+  height: 16px !important;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23a3dba7\"><path d=\"M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z\"/></svg>') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  display: inline-block !important;
+  flex-shrink: 0 !important;
+}
+
+button[data-tt="components_PrivacyCell_TUXButton"] span.px-icon svg {
+  display: none !important;
+}
+
+div[data-tt="components_RowLayout_FlexRow_4"] button[data-tt="components_PrivacyCell_TUXButton"] .TUXButton-label,
+button[data-tt="components_PrivacyCell_TUXButton"] .TUXButton-label {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #a3dba7 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+button[data-tt="components_PrivacyCell_TUXButton"] .TUXButton-iconContainer:last-child svg {
+  width: 10px !important;
+  height: 10px !important;
+  fill: #a3dba7 !important;
+  opacity: 0.7 !important;
+  flex-shrink: 0 !important;
+}
+
+/* --- 4. [TOMBOL SETTINGS GEAR & ACTIONS] (Kanan Bawah Tetap) --- */
+div[data-tt="components_RowLayout_FlexRow_9"] {
+  position: absolute !important;
+  bottom: 10px !important;
+  right: 10px !important;
+  width: auto !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+  z-index: 5 !important;
+}
+
+div[data-tt="components_ActionCell_FlexRow_7"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 6px !important;
+}
+
+/* Sembunyikan tombol Pen, Analytics, Comments di bawah (cukup visibilitas, tombol check & settings) */
+div[data-tt="components_ActionCell_FlexRow_7"] > div.Tooltip__root:not(:has(button[data-tt="components_ActionCell_Clickable"])),
+div[data-tt="components_ActionCell_FlexRow_7"] > a,
+div[data-tt="components_ActionCell_FlexRow_7"] > button:not(.fish-check-btn):not(.fish-check-quality-btn):not([data-tt="components_ActionCell_Clickable"]) {
+  display: none !important;
+}
+
+/* Material 3 Settings Gear Icon Button */
+button[data-tt="components_ActionCell_Clickable"] {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+}
+
+button[data-tt="components_ActionCell_Clickable"]:hover {
+  background: rgba(163, 219, 167, 0.16) !important;
+  border-color: #a3dba7 !important;
+}
+
+button[data-tt="components_ActionCell_Clickable"] svg {
+  display: none !important;
+}
+
+button[data-tt="components_ActionCell_Clickable"] div[data-tt="components_ActionCell_FlexCenter"] {
+  width: 16px !important;
+  height: 16px !important;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23a3dba7\"><path d=\"M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z\"/></svg>') !important;
+  background-size: contain !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+}
+
+/* Pop-up Dropdown Action Settings (Pin to top, Download, Delete) — Ringan & Zero-Lag */
+.Dropdown__content:has(div[data-tt="components_ActionCell_FlexColumn"]),
+div[data-tt="components_Popover_Container"]:has(> div[data-tt="components_ActionCell_FlexColumn"]) {
+  background-color: #1a211b !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  padding: 6px !important;
+  overflow: hidden !important;
+  contain: layout style !important;
+}
+
+/* Netralisasi Wrapper Putih Bawaan */
+div[data-tt="components_ActionCell_FlexColumn"],
+div.css-1m0gftl.edss2sz6,
+div[data-tt="components_Popover_Container"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  gap: 2px !important;
+}
+
+/* Item Menu Settings (tanpa transition: all agar hover pindah-pindah 0ms instan) */
+div[data-tt="components_ActionCell_FlexRow"],
+div.css-cvhdcd.edss2sz9 {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  color: #f2f7f2 !important;
+  cursor: pointer !important;
+  transition: none !important;
+}
+
+div[data-tt="components_ActionCell_FlexRow"]:hover,
+div.css-cvhdcd.edss2sz9:hover {
+  background-color: rgba(255, 255, 255, 0.09) !important;
+}
+
+/* Icon & Label Item Menu */
+div[data-tt="components_ActionCell_FlexRow"] span.px-icon,
+div[data-tt="components_ActionCell_FlexRow"] svg {
+  color: #a3dba7 !important;
+  fill: #a3dba7 !important;
+  width: 16px !important;
+  height: 16px !important;
+}
+
+div[data-tt="components_ActionCell_FlexRow"] span[data-tt="components_ActionCell_TUXText"],
+div[data-tt="components_ActionCell_FlexRow"] .TUXText {
+  color: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+/* Delete Item Styling (item terakhir pada menu ActionCell — bebas :has():hover lag) */
+div[data-tt="components_ActionCell_FlexColumn"] > div[data-tt="components_ActionCell_FlexRow"]:last-child {
+  color: #ffb4ab !important;
+}
+
+div[data-tt="components_ActionCell_FlexColumn"] > div[data-tt="components_ActionCell_FlexRow"]:last-child span.px-icon,
+div[data-tt="components_ActionCell_FlexColumn"] > div[data-tt="components_ActionCell_FlexRow"]:last-child svg {
+  color: #ffb4ab !important;
+  fill: #ffb4ab !important;
+}
+
+div[data-tt="components_ActionCell_FlexColumn"] > div[data-tt="components_ActionCell_FlexRow"]:last-child:hover {
+  background-color: rgba(255, 180, 171, 0.14) !important;
+  color: #ff897d !important;
+}
+
+/* Sembunyikan kolom checkbox/kosong agar tidak menambah gap vertikal di card */
+div[data-tt="components_RowLayout_FlexRow"] > div:empty,
+div[data-tt="components_RowLayout_FlexRow"] > div[data-tt="components_RowLayout_FlexRow_1"]:empty {
+  display: none !important;
+}
+
+/* ========================================================
+ * Mobile Post Card Layout (<= 600px) — Anti-Tabrakan & Rapi
+ * ======================================================== */
+@media (max-width: 600px) {
+  div.css-153feq8[data-tt="components_RowLayout_FlexRow"],
+  div[data-tt="components_RowLayout_FlexRow"] {
+    padding: 8px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow_3"],
+  div.css-tlecb3[data-tt="components_RowLayout_FlexRow_3"] {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    gap: 6px !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow_5"] {
+    padding: 5px 4px !important;
+    margin: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    gap: 4px !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow_6"],
+  div[data-tt="components_RowLayout_FlexRow_7"],
+  div[data-tt="components_RowLayout_FlexRow_8"] {
+    font-size: 11px !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow_6"] span[data-tt="components_ItemRow_TUXText"]::before,
+  div[data-tt="components_RowLayout_FlexRow_7"] span[data-tt="components_ItemRow_TUXText"]::before,
+  div[data-tt="components_RowLayout_FlexRow_8"] span[data-tt="components_ItemRow_TUXText"]::before {
+    width: 12px !important;
+    height: 12px !important;
+    margin-right: 3px !important;
+  }
+
+  /* Default Mobile (tanpa tombol Check / non-public): Privacy kiri & Gear kanan sejajar 1 baris */
+  div[data-tt="components_RowLayout_FlexRow"]:not(.fish-has-check) div[data-tt="components_RowLayout_FlexRow_4"] {
+    max-width: calc(100% - 36px) !important;
+    width: auto !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow"]:not(.fish-has-check) div[data-tt="components_RowLayout_FlexRow_9"] {
+    position: absolute !important;
+    bottom: 8px !important;
+    right: 8px !important;
+    top: auto !important;
+    left: auto !important;
+    width: auto !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Mobile dengan tombol Check (Public): Privacy penuh di baris atas, Check + Gear di baris bawah */
+  div[data-tt="components_RowLayout_FlexRow"].fish-has-check div[data-tt="components_RowLayout_FlexRow_4"],
+  div[data-tt="components_RowLayout_FlexRow"].fish-has-check div[data-tt="components_RowLayout_FlexRow_4"] div:not(button *) {
+    max-width: 100% !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 1 1 auto !important;
+    display: flex !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow"].fish-has-check button[data-tt="components_PrivacyCell_TUXButton"] {
+    width: 100% !important;
+    justify-content: space-between !important;
+    height: 28px !important;
+    padding: 0 10px !important;
+  }
+
+  div[data-tt="components_RowLayout_FlexRow"].fish-has-check div[data-tt="components_RowLayout_FlexRow_9"] {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 32px !important;
+    flex: 0 0 auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+  }
+
+  div[data-tt="components_ActionCell_FlexRow_7"] {
+    width: 100% !important;
+    height: 28px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: 0 0 auto !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  div[data-tt="components_ActionCell_FlexRow_7"] > div.Tooltip__root {
+    height: 28px !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    flex: 0 0 auto !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+
+  .fish-check-btn {
+    flex: 1 1 auto !important;
+    height: 28px !important;
+  }
+
+  button[data-tt="components_ActionCell_Clickable"] {
+    flex: 0 0 28px !important;
+  }
+}
+
+
+
