@@ -17,6 +17,21 @@
   const _webMethodsState = {
     status: 'WORKING',
     defaultMethod: 'fish',
+    compress: {
+      maxShortSide: 1080,
+      maxFps: 60,
+      maxBitrateMbps: 50,
+      videoCodec: 'libx264',
+      preset: 'veryfast',
+      crf: '20',
+      maxrate: '17M',
+      bufsize: '28M',
+      pixFmt: 'yuv420p',
+      profile: 'high',
+      x264Params: 'aq-mode=2',
+      audioCodec: 'aac',
+      audioBitrate: '192k'
+    },
     methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', file: 'fish.js' }],
     loaded: false
   };
@@ -55,7 +70,7 @@
 
   const syncCardControlsFromState = () => {
     const toggle = document.getElementById('m3-bypass-toggle');
-    const compressToggle = document.getElementById('m3-compress-toggle');
+    const compressSwitch = document.getElementById('m3-compress-switch');
     const wmRow = document.getElementById('m3-watermark-row');
     const wmInput = document.getElementById('m3-watermark-input');
     const methodRow = document.getElementById('m3-method-row');
@@ -64,8 +79,13 @@
     if (toggle && toggle.checked !== enabled) {
       toggle.checked = enabled;
     }
-    if (compressToggle && compressToggle.checked !== isCompressVideoEnabled()) {
-      compressToggle.checked = isCompressVideoEnabled();
+    if (compressSwitch) {
+      const curComp = typeof getCompressMode === 'function' ? getCompressMode() : '1080p';
+      compressSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
+        const active = btn.dataset.compressMode === curComp;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
     }
     if (methodRow) {
       methodRow.style.display = enabled ? '' : 'none';
@@ -344,7 +364,7 @@
     card.className = 'm3-bypass-card';
 
     const isEnabled = isBypassUploadEnabled();
-    const isCompress = isCompressVideoEnabled();
+    const curCompressMode = typeof getCompressMode === 'function' ? getCompressMode() : '1080p';
     const currentWm = getBypassWatermark();
     const statusAtRender = getMethodStatus();
     const isWorking = statusAtRender === 'WORKING';
@@ -353,7 +373,7 @@
       <div class="m3-card-real-content" id="m3-card-real-content">
         <div class="m3-bypass-header">
           <div class="m3-bypass-title-row">
-            <label class="m3-switch" for="m3-bypass-toggle" title="Toggle 1:1 Bypass Upload">
+            <label class="m3-switch" for="m3-bypass-toggle" title="Toggle Bypass Upload">
               <input type="checkbox" id="m3-bypass-toggle" ${isEnabled ? 'checked' : ''} />
               <span class="m3-slider"></span>
             </label>
@@ -364,11 +384,8 @@
             <span class="m3-status-text">${escapeHtmlAttr(statusAtRender)}</span>
           </div>
         </div>
-        <p class="m3-bypass-desc">
-          Video calibration runs locally inside the extension before handover to TikTok Studio's upload panel.
-        </p>
-        <div class="m3-watermark-row" id="m3-method-row" style="${isEnabled ? '' : 'display: none;'}">
-          <span class="m3-watermark-label">Method</span>
+        <div class="m3-field" id="m3-method-row" style="${isEnabled ? '' : 'display: none;'}">
+          <span class="m3-field-label">Method</span>
           <div class="m3-method-switch" id="m3-method-switch" role="radiogroup" aria-label="Method">
             ${_webMethodsState.methods.map((m) => {
               const active = m.id === getSelectedMethodId();
@@ -376,30 +393,24 @@
             }).join('')}
           </div>
         </div>
-        <div class="m3-watermark-row" id="m3-watermark-row" style="${isEnabled ? '' : 'display: none;'}">
-          <label class="m3-watermark-label" for="m3-watermark-input">Watermark</label>
-          <input type="text" id="m3-watermark-input" class="m3-watermark-input" value="${escapeHtmlAttr(currentWm)}" placeholder="Method from @username" />
-        </div>
-        <div class="m3-compress-section">
-          <div class="m3-bypass-header">
-            <div class="m3-bypass-title-row">
-              <label class="m3-switch" for="m3-compress-toggle" title="Compress video before upload">
-                <input type="checkbox" id="m3-compress-toggle" ${isCompress ? 'checked' : ''} />
-                <span class="m3-slider"></span>
-              </label>
-              <span class="m3-bypass-title">Compress Video</span>
-            </div>
+        <div class="m3-field" id="m3-compress-field">
+          <span class="m3-field-label">Compress Video</span>
+          <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compress Video">
+            <button type="button" class="m3-method-pill ${curCompressMode === 'off' ? 'is-active' : ''}" data-compress-mode="off" id="m3-compress-off-btn" role="radio" aria-checked="${curCompressMode === 'off' ? 'true' : 'false'}">OFF</button>
+            <button type="button" class="m3-method-pill ${curCompressMode === '720p' ? 'is-active' : ''}" data-compress-mode="720p" role="radio" aria-checked="${curCompressMode === '720p' ? 'true' : 'false'}">720P</button>
+            <button type="button" class="m3-method-pill ${curCompressMode === '1080p' ? 'is-active' : ''}" data-compress-mode="1080p" role="radio" aria-checked="${curCompressMode === '1080p' ? 'true' : 'false'}">1080P</button>
           </div>
-          <p class="m3-bypass-desc">
-            Compress video locally before upload. First run downloads ~31 MB FFmpeg WASM.
-          </p>
           <p class="m3-compress-limit-note" id="m3-compress-limit-note" style="display: none;"></p>
+        </div>
+        <div class="m3-field" id="m3-watermark-row" style="${isEnabled ? '' : 'display: none;'}">
+          <label class="m3-field-label" for="m3-watermark-input">Watermark</label>
+          <input type="text" id="m3-watermark-input" class="m3-watermark-input" value="${escapeHtmlAttr(currentWm)}" placeholder="Method from @username" />
         </div>
       </div>
     `;
 
     const toggle = card.querySelector('#m3-bypass-toggle');
-    const compressToggle = card.querySelector('#m3-compress-toggle');
+    const compressSwitch = card.querySelector('#m3-compress-switch');
     const methodRow = card.querySelector('#m3-method-row');
     const methodSwitch = card.querySelector('#m3-method-switch');
     const wmRow = card.querySelector('#m3-watermark-row');
@@ -431,11 +442,29 @@
 
     bindMethodPills(methodSwitch);
 
+    if (compressSwitch) {
+      compressSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.compressMode || '1080p';
+          if (_compressLocked && mode === 'off') return;
+          if (typeof setCompressMode === 'function') setCompressMode(mode);
+          compressSwitch.querySelectorAll('.m3-method-pill').forEach((other) => {
+            const active = other.dataset.compressMode === mode;
+            other.classList.toggle('is-active', active);
+            other.setAttribute('aria-checked', active ? 'true' : 'false');
+          });
+        });
+      });
+    }
+
     sendRuntimeMsg({ type: 'GET_WEB_METHODS' }).then((res) => {
       const data = res && res.data;
       if (!data || !Array.isArray(data.methods) || !data.methods.length) return;
       _webMethodsState.status = data.status || 'WORKING';
       _webMethodsState.defaultMethod = data.defaultMethod || data.methods[0].id || 'fish';
+      if (data.compress && typeof data.compress === 'object') {
+        _webMethodsState.compress = { ..._webMethodsState.compress, ...data.compress };
+      }
       _webMethodsState.methods = data.methods;
       _webMethodsState.loaded = true;
       const sw = document.getElementById('m3-method-switch');
@@ -501,21 +530,22 @@
 
   const setCompressLimitLock = (locked, reasonText = '') => {
     _compressLocked = Boolean(locked);
-    const toggle = document.getElementById('m3-compress-toggle');
-    const switchLabel = toggle?.closest('.m3-switch');
+    const compressSwitch = document.getElementById('m3-compress-switch');
+    const offBtn = document.getElementById('m3-compress-off-btn');
     const noteEl = document.getElementById('m3-compress-limit-note');
 
-    if (toggle) {
-      if (_compressLocked) {
-        toggle.checked = true;
-        toggle.disabled = true;
-        setCompressVideoEnabled(true);
-      } else {
-        toggle.disabled = false;
-      }
+    if (offBtn) {
+      offBtn.disabled = _compressLocked;
     }
-    if (switchLabel) {
-      switchLabel.classList.toggle('is-locked', _compressLocked);
+    if (_compressLocked && typeof getCompressMode === 'function' && getCompressMode() === 'off') {
+      if (typeof setCompressMode === 'function') setCompressMode('1080p');
+      if (compressSwitch) {
+        compressSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
+          const active = btn.dataset.compressMode === '1080p';
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-checked', active ? 'true' : 'false');
+        });
+      }
     }
     if (noteEl) {
       if (_compressLocked && reasonText) {
@@ -585,12 +615,17 @@
       }
     } catch (_) {}
 
+    const cCfg = _webMethodsState.compress || {};
+    const maxShortSide = Number(cCfg.maxShortSide) || 1080;
+    const maxFps = Number(cCfg.maxFps) || 60;
+    const maxBitrateMbps = Number(cCfg.maxBitrateMbps) || 50;
+
     const shortSide = Math.min(meta.width, meta.height);
     const bitrateMbps = meta.duration > 0 ? (file.size * 8) / (meta.duration * 1000000) : 0;
     const exceeded = [];
-    if (shortSide > 1080) exceeded.push(`${meta.width}x${meta.height} (>1080p)`);
-    if (fps > 60) exceeded.push(`${fps} FPS (>60 FPS)`);
-    if (bitrateMbps > 50) exceeded.push(`${bitrateMbps.toFixed(1)} Mbps (>50 Mbps)`);
+    if (shortSide > maxShortSide) exceeded.push(`${meta.width}x${meta.height} (>${maxShortSide}p)`);
+    if (fps > maxFps) exceeded.push(`${fps} FPS (>${maxFps} FPS)`);
+    if (bitrateMbps > maxBitrateMbps) exceeded.push(`${bitrateMbps.toFixed(1)} Mbps (>${maxBitrateMbps} Mbps)`);
 
     return {
       width: meta.width,
@@ -727,7 +762,16 @@
         }
       });
 
-      port.postMessage({ type: 'INIT', fileName: file.name, totalSize: inputBytes.byteLength, totalChunks });
+      port.postMessage({
+        type: 'INIT',
+        fileName: file.name,
+        totalSize: inputBytes.byteLength,
+        totalChunks,
+        compressConfig: {
+          ...(_webMethodsState.compress || {}),
+          compressMode: typeof getCompressMode === 'function' ? getCompressMode() : '1080p'
+        }
+      });
       for (let i = 0; i < totalChunks; i++) {
         const slice = inputBytes.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         port.postMessage({ type: 'CHUNK', index: i, b64: uint8ToBase64(slice) });

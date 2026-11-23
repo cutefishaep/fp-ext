@@ -34,6 +34,7 @@
 
     let fileName = 'video.mp4';
     let totalSize = 0;
+    let compressConfig = null;
     let incomingChunks = [];
 
     port.onMessage.addListener((msg) => {
@@ -42,6 +43,7 @@
       if (msg.type === 'INIT') {
         fileName = msg.fileName || 'video.mp4';
         totalSize = Number(msg.totalSize) || 0;
+        compressConfig = (msg.compressConfig && typeof msg.compressConfig === 'object') ? msg.compressConfig : null;
         incomingChunks = [];
         return;
       }
@@ -97,7 +99,7 @@
         };
 
         worker.addEventListener('message', onWorkerMsg);
-        worker.postMessage({ type: 'COMPRESS', buffer: merged.buffer, fileName }, [merged.buffer]);
+        worker.postMessage({ type: 'COMPRESS', buffer: merged.buffer, fileName, compressConfig }, [merged.buffer]);
       }
     });
   });

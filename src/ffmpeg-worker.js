@@ -124,15 +124,32 @@ self.onmessage = async (e) => {
       emitProgress('compress', pct, 'Compressing...');
     });
 
+    const cfg = (msg.compressConfig && typeof msg.compressConfig === 'object') ? msg.compressConfig : {};
+    const vCodec = String(cfg.videoCodec || 'libx264');
+    const preset = String(cfg.preset || 'veryfast');
+    const crf = String(cfg.crf || '20');
+    const pixFmt = String(cfg.pixFmt || 'yuv420p');
+    const profile = String(cfg.profile || 'high');
+    const aCodec = String(cfg.audioCodec || 'aac');
+    const aBitrate = String(cfg.audioBitrate || '192k');
+    const targetMode = String(cfg.compressMode || '1080p');
+    const maxDim = targetMode === '720p' ? 720 : (Number(cfg.maxShortSide) || 1080);
+    const scaleFilter = targetMode === '720p'
+      ? `scale='if(gt(iw,ih),-2,${maxDim})':'if(gt(iw,ih),${maxDim},-2)':flags=lanczos`
+      : `scale='if(gt(iw,ih),-2,min(${maxDim},iw))':'if(gt(iw,ih),min(${maxDim},ih),-2)':flags=lanczos`;
+
     const baseArgs = [
       '-y', '-i', '/input.mp4',
       '-map', '0:v:0', '-map', '0:a?',
-      '-c:v', 'libx264',
-      '-preset', 'veryfast',
-      '-crf', '20',
-      '-pix_fmt', 'yuv420p',
-      '-profile:v', 'high',
-      '-x264-params', 'aq-mode=2',
+      '-vf', scaleFilter,
+      '-c:v', vCodec,
+      '-preset', preset,
+      '-crf', crf,
+      ...(cfg.maxrate ? ['-maxrate', String(cfg.maxrate)] : []),
+      ...(cfg.bufsize ? ['-bufsize', String(cfg.bufsize)] : []),
+      '-pix_fmt', pixFmt,
+      '-profile:v', profile,
+      ...(cfg.x264Params && vCodec === 'libx264' ? ['-x264-params', String(cfg.x264Params)] : []),
       '-movflags', '+faststart'
     ];
 
@@ -140,7 +157,7 @@ self.onmessage = async (e) => {
     if (ret !== 0) {
       try { core.FS.unlink('/output.mp4'); } catch (_) {}
       core.reset();
-      ret = core.exec(...baseArgs, '-c:a', 'aac', '-b:a', '192k', '/output.mp4');
+      ret = core.exec(...baseArgs, '-c:a', aCodec, '-b:a', aBitrate, '/output.mp4');
     }
 
     if (ret !== 0) {

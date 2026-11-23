@@ -40,7 +40,7 @@
         const timer = setTimeout(() => {
           _pendingProbes.delete(reqId);
           resolve(null);
-        }, 15000);
+        }, 25000);
 
         _pendingProbes.set(reqId, (result) => {
           clearTimeout(timer);

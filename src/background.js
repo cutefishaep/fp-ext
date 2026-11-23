@@ -825,37 +825,56 @@ const parseMp4MetadataFromBuffer = (buffer) => {
   return { fps, width, height, comment, duration: durationSec };
 };
 
+const fetchWithTimeout = async (url, options = {}, timeoutMs = 8000) => {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
 const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   let tikwmData = null;
-  let resolvedStreamUrl = isAllowedUrl(streamUrl, ALLOWED_STREAM_HOST_RE) ? streamUrl : null;
 
   if (pageUrl && typeof pageUrl === 'string' && pageUrl.startsWith('https://www.tiktok.com/')) {
     try {
       const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}&hd=1`;
       if (isAllowedUrl(apiUrl, ALLOWED_TIKWM_HOST_RE)) {
-        const twRes = await fetch(apiUrl);
+        const twRes = await fetchWithTimeout(apiUrl, {}, 8000);
         if (twRes.ok) {
           const twJson = await twRes.json();
           if (twJson && twJson.code === 0 && twJson.data) {
             tikwmData = twJson.data;
-            const cand = tikwmData.hdplay || tikwmData.play || (tikwmData.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null);
-            if (isAllowedUrl(cand, ALLOWED_STREAM_HOST_RE)) {
-              resolvedStreamUrl = cand;
-            }
           }
         }
       }
     } catch (_) {}
   }
 
+  const rawCandidates = [
+    tikwmData?.hdplay,
+    tikwmData?.play,
+    tikwmData?.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null,
+    streamUrl
+  ];
+  const candidates = [];
+  for (const c of rawCandidates) {
+    if (c && isAllowedUrl(c, ALLOWED_STREAM_HOST_RE) && !candidates.includes(c)) {
+      candidates.push(c);
+    }
+  }
+
+  let resolvedStreamUrl = candidates[0] || null;
   let totalSizeBytes = tikwmData?.size || 0;
   let atomMeta = null;
 
-  if (resolvedStreamUrl) {
+  for (const candUrl of candidates) {
     try {
-      const probeRes = await fetch(resolvedStreamUrl, {
-        headers: { 'Range': 'bytes=0-2097151' }
-      });
+      const probeRes = await fetchWithTimeout(candUrl, {
+        headers: { 'Range': 'bytes=0-1048575' }
+      }, 8000);
       const cr = probeRes.headers.get('content-range');
       if (cr && cr.includes('/')) {
         const parsed = parseInt(cr.split('/')[1], 10);
@@ -869,8 +888,33 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
       }
 
       if (probeRes.ok || probeRes.status === 206) {
+        resolvedStreamUrl = candUrl;
         const ab = await probeRes.arrayBuffer();
-        atomMeta = parseMp4MetadataFromBuffer(new Uint8Array(ab));
+        let meta = parseMp4MetadataFromBuffer(new Uint8Array(ab));
+        if (!meta || !meta.width || !meta.fps) {
+          try {
+            const tailRes = await fetchWithTimeout(candUrl, {
+              headers: { 'Range': 'bytes=-524288' }
+            }, 8000);
+            if (tailRes.ok || tailRes.status === 206) {
+              const tailAb = await tailRes.arrayBuffer();
+              const tailMeta = parseMp4MetadataFromBuffer(new Uint8Array(tailAb));
+              if (tailMeta && (tailMeta.width || tailMeta.fps)) {
+                meta = {
+                  fps: tailMeta.fps || meta?.fps || 0,
+                  width: tailMeta.width || meta?.width || 0,
+                  height: tailMeta.height || meta?.height || 0,
+                  comment: tailMeta.comment || meta?.comment || '',
+                  duration: tailMeta.duration || meta?.duration || 0
+                };
+              }
+            }
+          } catch (_) {}
+        }
+        atomMeta = meta;
+        if (atomMeta && atomMeta.width && atomMeta.fps) {
+          break;
+        }
       }
     } catch (_) {}
   }

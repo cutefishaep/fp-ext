@@ -452,8 +452,23 @@
   box-shadow: 0 0 10px rgba(163, 219, 167, 0.3) !important;
 }
 
+.m3-field {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  margin-top: 14px !important;
+}
+
+.m3-field-label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  color: #b7c4b9 !important;
+}
+
 .m3-method-switch {
-  flex: 1 1 auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
   display: inline-flex !important;
   align-items: center !important;
   gap: 4px !important;
@@ -470,7 +485,7 @@
   background: transparent !important;
   color: #9ea7a0 !important;
   border-radius: 999px !important;
-  padding: 6px 10px !important;
+  padding: 7px 10px !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   cursor: pointer !important;
@@ -478,13 +493,18 @@
   transition: background-color 0.18s, color 0.18s !important;
 }
 
-.m3-method-pill:hover {
+.m3-method-pill:hover:not(:disabled) {
   color: #f2f7f2 !important;
 }
 
 .m3-method-pill.is-active {
   background: rgba(163, 219, 167, 0.22) !important;
   color: #a3dba7 !important;
+}
+
+.m3-method-pill:disabled {
+  opacity: 0.38 !important;
+  cursor: not-allowed !important;
 }
 
 .m3-switch.is-locked {

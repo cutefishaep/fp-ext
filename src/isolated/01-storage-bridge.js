@@ -8,12 +8,13 @@
 
   let _bypassEnabled = true;
   let _bypassWatermark = DEFAULT_WATERMARK;
-  let _compressEnabled = true;
+  let _compressMode = '1080p';
   let _liveConfig = null;
 
   const isBypassUploadEnabled = () => _bypassEnabled;
   const getBypassWatermark = () => _bypassWatermark;
-  const isCompressVideoEnabled = () => _compressEnabled;
+  const getCompressMode = () => _compressMode;
+  const isCompressVideoEnabled = () => _compressMode !== 'off';
   const getLiveConfig = () => _liveConfig;
 
   const syncSettingsToPage = () => {
@@ -85,11 +86,16 @@
     syncSettingsToPage();
   };
 
-  const setCompressVideoEnabled = (enabled) => {
-    _compressEnabled = Boolean(enabled);
+  const setCompressMode = (mode) => {
+    const clean = (mode === 'off' || mode === '720p' || mode === '1080p') ? mode : '1080p';
+    _compressMode = clean;
     if (isExtensionAlive()) {
-      coreStorageSet({ [STORAGE_KEYS.compress]: _compressEnabled });
+      coreStorageSet({ [STORAGE_KEYS.compress]: clean });
     }
+  };
+
+  const setCompressVideoEnabled = (enabled) => {
+    setCompressMode(enabled ? (_compressMode === 'off' ? '1080p' : _compressMode) : 'off');
   };
 
   const initSettings = async () => {
@@ -97,8 +103,10 @@
       if (isExtensionAlive()) {
         const stored = await coreStorageGet([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark, STORAGE_KEYS.compress, 'fa_live_core']);
         _liveConfig = stored.fa_live_core?.config || null;
-        if (typeof stored[STORAGE_KEYS.compress] === 'boolean') {
-          _compressEnabled = stored[STORAGE_KEYS.compress];
+        if (typeof stored[STORAGE_KEYS.compress] === 'string' && ['off', '720p', '1080p'].includes(stored[STORAGE_KEYS.compress])) {
+          _compressMode = stored[STORAGE_KEYS.compress];
+        } else if (typeof stored[STORAGE_KEYS.compress] === 'boolean') {
+          _compressMode = stored[STORAGE_KEYS.compress] ? '1080p' : 'off';
         }
         let needsPersist = false;
         const toPersist = {};
