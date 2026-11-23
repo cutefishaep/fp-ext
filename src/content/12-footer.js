@@ -30,7 +30,10 @@
 
       let outBytes = null;
       if (methodObj && typeof methodObj.patch === 'function') {
-        outBytes = await methodObj.patch(new Uint8Array(msg.buffer), { mode: 'off', log: () => {} });
+        outBytes = await methodObj.patch(new Uint8Array(msg.buffer), { mode: msg.mode || 'off', log: () => {} });
+        if (outBytes && !(outBytes instanceof Uint8Array) && !(outBytes instanceof ArrayBuffer) && outBytes.bytes) {
+          outBytes = outBytes.bytes;
+        }
       } else if (typeof window.patchMp4Fish === 'function') {
         outBytes = window.patchMp4Fish(new Uint8Array(msg.buffer));
       } else {

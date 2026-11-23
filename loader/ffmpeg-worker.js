@@ -124,14 +124,30 @@ self.onmessage = async (e) => {
       emitProgress('compress', pct, 'Compressing...');
     });
 
-    const cfg = (msg.compressConfig && typeof msg.compressConfig === 'object') ? msg.compressConfig : {};
+    const fetchWebCompressConfig = async () => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch('https://www.cutefish.my.id/assets/vendor/tiktok-method/methods.json', { cache: 'no-store', signal: ctrl.signal });
+        clearTimeout(t);
+        if (res.ok) {
+          const json = await res.json();
+          if (json && json.compress && typeof json.compress === 'object') return json.compress;
+        }
+      } catch (_) {}
+      return null;
+    };
+
+    const liveCfg = await fetchWebCompressConfig();
+    const msgCfg = (msg.compressConfig && typeof msg.compressConfig === 'object') ? msg.compressConfig : {};
+    const cfg = { ...msgCfg, ...(liveCfg || {}), compressMode: msgCfg.compressMode || '1080p' };
     const vCodec = String(cfg.videoCodec || 'libx264');
-    const preset = String(cfg.preset || 'veryfast');
-    const crf = String(cfg.crf || '20');
+    const preset = String(cfg.preset || 'slow');
+    const crf = String(cfg.crf || '23');
     const pixFmt = String(cfg.pixFmt || 'yuv420p');
     const profile = String(cfg.profile || 'high');
     const aCodec = String(cfg.audioCodec || 'aac');
-    const aBitrate = String(cfg.audioBitrate || '192k');
+    const aBitrate = String(cfg.audioBitrate || '128k');
     const targetMode = String(cfg.compressMode || '1080p');
     const maxDim = targetMode === '720p' ? 720 : (Number(cfg.maxShortSide) || 1080);
     const scaleFilter = targetMode === '720p'

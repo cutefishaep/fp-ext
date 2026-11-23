@@ -14,6 +14,7 @@
   };
 
   const METHOD_STORAGE_KEY = 'fish_acc_selected_method';
+  const WEB_METHODS_JSON_URL = 'https://www.cutefish.my.id/assets/vendor/tiktok-method/methods.json';
   const _webMethodsState = {
     status: 'WORKING',
     defaultMethod: 'fish',
@@ -22,18 +23,23 @@
       maxFps: 60,
       maxBitrateMbps: 50,
       videoCodec: 'libx264',
-      preset: 'veryfast',
-      crf: '20',
-      maxrate: '17M',
-      bufsize: '28M',
+      preset: 'slow',
+      crf: '23',
+      maxrate: '8M',
+      bufsize: '16M',
       pixFmt: 'yuv420p',
       profile: 'high',
       x264Params: 'aq-mode=2',
       audioCodec: 'aac',
-      audioBitrate: '192k'
+      audioBitrate: '128k'
     },
-    methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', file: 'fish.js' }],
+    methods: [{ id: 'fish', name: 'FISH', status: 'WORKING', supportsCompress: true, file: 'fish.js' }],
     loaded: false
+  };
+
+  const getSelectedMethodObj = () => {
+    const id = getSelectedMethodId();
+    return _webMethodsState.methods.find((m) => m.id === id) || _webMethodsState.methods[0] || null;
   };
 
   const getSelectedMethodId = () => {
@@ -87,6 +93,11 @@
         btn.setAttribute('aria-checked', active ? 'true' : 'false');
       });
     }
+    const compressField = document.getElementById('m3-compress-field');
+    if (compressField) {
+      const mObj = getSelectedMethodObj();
+      compressField.style.display = (mObj && mObj.supportsCompress === false) ? 'none' : '';
+    }
     if (methodRow) {
       methodRow.style.display = enabled ? '' : 'none';
     }
@@ -136,7 +147,8 @@
   // Unified Video Calibrator Pipeline (fetch method dari cutefish.my.id, eksekusi via MAIN world bridge)
   const calibrateVideoFile = async (file, methodId = 'fish') => {
     try {
-      await sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId });
+      const mObj = _webMethodsState.methods.find((m) => m.id === methodId);
+      await sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId, methodFile: mObj?.file || '' });
       log('Patching video using web method (' + methodId + ') from cutefish.my.id...');
       const buf = await file.arrayBuffer();
       const patchedAb = await patchViaWebMethodBridge(buf, methodId);
@@ -428,7 +440,9 @@
             other.setAttribute('aria-checked', active ? 'true' : 'false');
           });
           updateMethodStatusBadge();
-          sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: nextId });
+          syncCardControlsFromState();
+          const mObj = _webMethodsState.methods.find((m) => m.id === nextId);
+          sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: nextId, methodFile: mObj?.file || '' });
         });
       });
     };
@@ -457,9 +471,20 @@
       });
     }
 
-    sendRuntimeMsg({ type: 'GET_WEB_METHODS' }).then((res) => {
-      const data = res && res.data;
-      if (!data || !Array.isArray(data.methods) || !data.methods.length) return;
+    const loadWebMethodsFromSite = async () => {
+      let data = null;
+      try {
+        const directRes = await fetch(WEB_METHODS_JSON_URL, { cache: 'no-store' });
+        if (directRes.ok) {
+          const parsed = await directRes.json();
+          if (parsed && Array.isArray(parsed.methods)) data = parsed;
+        }
+      } catch (_) {}
+      if (!data) {
+        const res = await sendRuntimeMsg({ type: 'GET_WEB_METHODS' });
+        if (res && res.data && Array.isArray(res.data.methods)) data = res.data;
+      }
+      if (!data || !data.methods.length) return;
       _webMethodsState.status = data.status || 'WORKING';
       _webMethodsState.defaultMethod = data.defaultMethod || data.methods[0].id || 'fish';
       if (data.compress && typeof data.compress === 'object') {
@@ -477,8 +502,12 @@
         bindMethodPills(sw);
       }
       updateMethodStatusBadge();
-      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: getSelectedMethodId() });
-    });
+      syncCardControlsFromState();
+      const selObj = getSelectedMethodObj();
+      sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: getSelectedMethodId(), methodFile: selObj?.file || '' });
+    };
+
+    loadWebMethodsFromSite();
 
     if (wmInput) {
       wmInput.addEventListener('input', (e) => {
@@ -864,7 +893,9 @@
         setCompressLimitLock(false);
       }
 
-      const doCompress = limits.exceedsLimit || isCompressVideoEnabled();
+      const selMethodObj = getSelectedMethodObj();
+      const supportsCompress = !selMethodObj || selMethodObj.supportsCompress !== false;
+      const doCompress = supportsCompress && (limits.exceedsLimit || isCompressVideoEnabled());
       const doBypass = isBypassUploadEnabled();
       let workingFile = file;
 

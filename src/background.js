@@ -170,12 +170,15 @@ const fetchWebMethodsConfig = async () => {
   };
 };
 
-const syncWebMethodUserScript = async (methodId = 'fish', tabId = null) => {
+const syncWebMethodUserScript = async (methodId = 'fish', tabId = null, methodFile = '') => {
   const cleanId = String(methodId || 'fish').replace(/[^a-z0-9_-]/gi, '') || 'fish';
+  const safeFile = (typeof methodFile === 'string' && /^[a-z0-9_.-]+\.js$/i.test(methodFile) && !methodFile.includes('..'))
+    ? methodFile
+    : `${cleanId}.js`;
   const storageKey = `fp_ext_web_method_${cleanId}`;
   let code = '';
   try {
-    const res = await fetch(`${WEB_METHODS_BASE}${cleanId}.js`, { cache: 'no-store' });
+    const res = await fetch(`${WEB_METHODS_BASE}${safeFile}`, { cache: 'no-store' });
     if (res.ok) {
       code = await res.text();
       if (code) {
@@ -1046,7 +1049,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === 'SYNC_WEB_METHOD') {
-    syncWebMethodUserScript(message.methodId || 'fish', sender?.tab?.id || null)
+    syncWebMethodUserScript(message.methodId || 'fish', sender?.tab?.id || null, message.methodFile || '')
       .then((result) => sendResponse(result))
       .catch((err) => sendResponse({ ok: false, error: err?.message || 'Sync web method failed.' }));
     return true;
