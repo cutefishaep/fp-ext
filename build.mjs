@@ -27,6 +27,7 @@ import { createHash, createPrivateKey, createPublicKey, createSign, generateKeyP
 import vm from 'node:vm';
 
 const root = dirname(fileURLToPath(import.meta.url));
+const readTextLf = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 
 function checkJsSyntax(code, label) {
   new vm.Script(code, { filename: label });
@@ -50,13 +51,13 @@ function buildContentJs() {
   let soundsafeBundled = false;
   for (const f of files) {
     if (f.startsWith('11-') && !soundsafeBundled) {
-      chunks.push(readFileSync(join(root, 'asset/engines/soundsafe-hook.js'), 'utf8') + '\n');
+      chunks.push(readTextLf(join(root, 'asset/engines/soundsafe-hook.js')) + '\n');
       soundsafeBundled = true;
     }
-    chunks.push(readFileSync(join(dir, f), 'utf8'));
+    chunks.push(readTextLf(join(dir, f)));
   }
   if (!soundsafeBundled) {
-    chunks.push(readFileSync(join(root, 'asset/engines/soundsafe-hook.js'), 'utf8'));
+    chunks.push(readTextLf(join(root, 'asset/engines/soundsafe-hook.js')));
   }
 
   writeAndReport('src/content.js', chunks.join(''), files.length + 1, true);
@@ -72,10 +73,10 @@ function buildIsolatedJs() {
   const chunks = [];
   let enginesBundled = false;
   for (const f of files) {
-    chunks.push(readFileSync(join(dir, f), 'utf8'));
+    chunks.push(readTextLf(join(dir, f)));
     if (f.startsWith('00-') && !enginesBundled) {
-      chunks.push('\n' + readFileSync(join(root, 'asset/engines/patch.js'), 'utf8') + '\n');
-      chunks.push(readFileSync(join(root, 'asset/engines/sl-sr.js'), 'utf8') + '\n');
+      chunks.push('\n' + readTextLf(join(root, 'asset/engines/patch.js')) + '\n');
+      chunks.push(readTextLf(join(root, 'asset/engines/sl-sr.js')) + '\n');
       enginesBundled = true;
     }
   }
@@ -92,7 +93,7 @@ function concatCss() {
     .filter((f) => f.endsWith('.css') && !f.startsWith('.'))
     .sort();
   if (files.length === 0) throw new Error('No .css parts found in src/styles/');
-  const out = files.map((f) => readFileSync(join(abs, f), 'utf8')).join('');
+  const out = files.map((f) => readTextLf(join(abs, f))).join('');
   writeAndReport('src/content.css', out, files.length, false);
 }
 
@@ -285,10 +286,15 @@ function packZipAndCrx() {
     'updater.html',
     'updater.js'
   ];
-  const files = runtimeFiles.map((name) => ({
-    name,
-    data: readFileSync(join(root, 'src', name))
-  }));
+  const files = runtimeFiles.map((name) => {
+    const fullPath = join(root, 'src', name);
+    if (/\.(js|css|html|json)$/i.test(name)) {
+      const normalized = readTextLf(fullPath);
+      writeFileSync(fullPath, normalized, 'utf8');
+      return { name, data: Buffer.from(normalized, 'utf8') };
+    }
+    return { name, data: readFileSync(fullPath) };
+  });
 
   const iconFiles = new Set(Object.values(manifest.icons || {}));
   for (const iconPath of iconFiles) {

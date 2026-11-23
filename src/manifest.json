@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fish Acceleration",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Desktop UA, Material 3 Dark theme & 1:1 Ingest Bypass for TikTok Studio.",
   "icons": {
     "16": "icons/icon16.png",
@@ -27,7 +27,8 @@
     "*://*.tikwm.com/*",
     "https://api.github.com/*",
     "https://github.com/*",
-    "https://objects.githubusercontent.com/*"
+    "https://objects.githubusercontent.com/*",
+    "https://release-assets.githubusercontent.com/*"
   ],
   "background": {
     "service_worker": "background.js"
