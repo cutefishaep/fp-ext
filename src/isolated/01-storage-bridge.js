@@ -8,7 +8,7 @@
 
   let _bypassEnabled = true;
   let _bypassWatermark = DEFAULT_WATERMARK;
-  let _compressEnabled = false;
+  let _compressEnabled = true;
   let _liveConfig = null;
 
   const isBypassUploadEnabled = () => _bypassEnabled;

@@ -59,7 +59,7 @@
     const wmRow = document.getElementById('m3-watermark-row');
     const wmInput = document.getElementById('m3-watermark-input');
     const methodRow = document.getElementById('m3-method-row');
-    const methodSelect = document.getElementById('m3-method-select');
+    const methodSwitch = document.getElementById('m3-method-switch');
     const enabled = isBypassUploadEnabled();
     if (toggle && toggle.checked !== enabled) {
       toggle.checked = enabled;
@@ -70,9 +70,13 @@
     if (methodRow) {
       methodRow.style.display = enabled ? '' : 'none';
     }
-    if (methodSelect) {
+    if (methodSwitch) {
       const cur = getSelectedMethodId();
-      if (methodSelect.value !== cur) methodSelect.value = cur;
+      methodSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
+        const active = btn.dataset.methodId === cur;
+        btn.classList.toggle('is-active', active);
+        btn.setAttribute('aria-checked', active ? 'true' : 'false');
+      });
     }
     if (wmRow) {
       wmRow.style.display = enabled ? '' : 'none';
@@ -353,7 +357,7 @@
               <input type="checkbox" id="m3-bypass-toggle" ${isEnabled ? 'checked' : ''} />
               <span class="m3-slider"></span>
             </label>
-            <span class="m3-bypass-title">Enable bypass upload ?</span>
+            <span class="m3-bypass-title">Bypass Upload</span>
           </div>
           <div class="m3-status-badge ${isWorking ? 'm3-status-working' : 'm3-status-patched'}" id="m3-bypass-status" title="Method Status: ${escapeHtmlAttr(statusAtRender)}">
             <span class="m3-pulse-dot"></span>
@@ -364,10 +368,13 @@
           Video calibration runs locally inside the extension before handover to TikTok Studio's upload panel.
         </p>
         <div class="m3-watermark-row" id="m3-method-row" style="${isEnabled ? '' : 'display: none;'}">
-          <label class="m3-watermark-label" for="m3-method-select">Method</label>
-          <select id="m3-method-select" class="m3-method-select">
-            ${_webMethodsState.methods.map((m) => `<option value="${escapeHtmlAttr(m.id)}" ${m.id === getSelectedMethodId() ? 'selected' : ''}>${escapeHtmlAttr(m.name || m.id)}</option>`).join('')}
-          </select>
+          <span class="m3-watermark-label">Method</span>
+          <div class="m3-method-switch" id="m3-method-switch" role="radiogroup" aria-label="Method">
+            ${_webMethodsState.methods.map((m) => {
+              const active = m.id === getSelectedMethodId();
+              return `<button type="button" class="m3-method-pill ${active ? 'is-active' : ''}" data-method-id="${escapeHtmlAttr(m.id)}" role="radio" aria-checked="${active ? 'true' : 'false'}">${escapeHtmlAttr(m.name || m.id)}</button>`;
+            }).join('')}
+          </div>
         </div>
         <div class="m3-watermark-row" id="m3-watermark-row" style="${isEnabled ? '' : 'display: none;'}">
           <label class="m3-watermark-label" for="m3-watermark-input">Watermark</label>
@@ -380,7 +387,7 @@
                 <input type="checkbox" id="m3-compress-toggle" ${isCompress ? 'checked' : ''} />
                 <span class="m3-slider"></span>
               </label>
-              <span class="m3-bypass-title">Compress video ?</span>
+              <span class="m3-bypass-title">Compress Video</span>
             </div>
           </div>
           <p class="m3-bypass-desc">
@@ -393,9 +400,26 @@
     const toggle = card.querySelector('#m3-bypass-toggle');
     const compressToggle = card.querySelector('#m3-compress-toggle');
     const methodRow = card.querySelector('#m3-method-row');
-    const methodSelect = card.querySelector('#m3-method-select');
+    const methodSwitch = card.querySelector('#m3-method-switch');
     const wmRow = card.querySelector('#m3-watermark-row');
     const wmInput = card.querySelector('#m3-watermark-input');
+
+    const bindMethodPills = (container) => {
+      if (!container) return;
+      container.querySelectorAll('.m3-method-pill').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const nextId = btn.dataset.methodId || 'fish';
+          setSelectedMethodId(nextId);
+          container.querySelectorAll('.m3-method-pill').forEach((other) => {
+            const active = other.dataset.methodId === nextId;
+            other.classList.toggle('is-active', active);
+            other.setAttribute('aria-checked', active ? 'true' : 'false');
+          });
+          updateMethodStatusBadge();
+          sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: nextId });
+        });
+      });
+    };
 
     toggle.addEventListener('change', (e) => {
       const checked = e.target.checked;
@@ -404,14 +428,7 @@
       if (wmRow) wmRow.style.display = checked ? '' : 'none';
     });
 
-    if (methodSelect) {
-      methodSelect.addEventListener('change', (e) => {
-        const nextId = e.target.value;
-        setSelectedMethodId(nextId);
-        updateMethodStatusBadge();
-        sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: nextId });
-      });
-    }
+    bindMethodPills(methodSwitch);
 
     sendRuntimeMsg({ type: 'GET_WEB_METHODS' }).then((res) => {
       const data = res && res.data;
@@ -420,12 +437,14 @@
       _webMethodsState.defaultMethod = data.defaultMethod || data.methods[0].id || 'fish';
       _webMethodsState.methods = data.methods;
       _webMethodsState.loaded = true;
-      const sel = document.getElementById('m3-method-select');
-      if (sel) {
+      const sw = document.getElementById('m3-method-switch');
+      if (sw) {
         const cur = getSelectedMethodId();
-        sel.innerHTML = data.methods.map((m) =>
-          `<option value="${escapeHtmlAttr(m.id)}" ${m.id === cur ? 'selected' : ''}>${escapeHtmlAttr(m.name || m.id)}</option>`
-        ).join('');
+        sw.innerHTML = data.methods.map((m) => {
+          const active = m.id === cur;
+          return `<button type="button" class="m3-method-pill ${active ? 'is-active' : ''}" data-method-id="${escapeHtmlAttr(m.id)}" role="radio" aria-checked="${active ? 'true' : 'false'}">${escapeHtmlAttr(m.name || m.id)}</button>`;
+        }).join('');
+        bindMethodPills(sw);
       }
       updateMethodStatusBadge();
       sendRuntimeMsg({ type: 'SYNC_WEB_METHOD', methodId: getSelectedMethodId() });

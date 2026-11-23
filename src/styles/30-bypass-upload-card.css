@@ -452,23 +452,39 @@
   box-shadow: 0 0 10px rgba(163, 219, 167, 0.3) !important;
 }
 
-.m3-method-select {
+.m3-method-switch {
   flex: 1 1 auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 4px !important;
   background: #111512 !important;
-  border: 1px solid rgba(163, 219, 167, 0.3) !important;
-  border-radius: 10px !important;
-  padding: 8px 12px !important;
-  font-size: 13px !important;
-  font-weight: 600 !important;
-  color: #f2f7f2 !important;
-  outline: none !important;
-  cursor: pointer !important;
-  transition: border-color 0.2s, box-shadow 0.2s !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(163, 219, 167, 0.22) !important;
 }
 
-.m3-method-select:focus {
-  border-color: #a3dba7 !important;
-  box-shadow: 0 0 10px rgba(163, 219, 167, 0.3) !important;
+.m3-method-pill {
+  flex: 1 1 0 !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: #9ea7a0 !important;
+  border-radius: 999px !important;
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  text-align: center !important;
+  transition: background-color 0.18s, color 0.18s !important;
+}
+
+.m3-method-pill:hover {
+  color: #f2f7f2 !important;
+}
+
+.m3-method-pill.is-active {
+  background: rgba(163, 219, 167, 0.22) !important;
+  color: #a3dba7 !important;
 }
 
 /* Tulisan Credit di LUAR Container */
