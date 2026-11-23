@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fish Acceleration",
-  "version": "1.3",
+  "version": "1.4",
   "description": "Pure MV3 Loader for Fish Acceleration — fetches and SHA-256 verifies latest Core live from GitHub Releases.",
   "icons": {
     "16": "icons/icon16.png",
