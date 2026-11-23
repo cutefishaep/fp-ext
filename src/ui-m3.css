@@ -150,6 +150,28 @@ body.popup-body .m3-card {
   color: var(--m3-text-primary);
 }
 
+.m3-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--m3-text-muted);
+}
+
+.m3-progress-meta span:first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.m3-progress-meta span:last-child {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--m3-primary);
+  flex-shrink: 0;
+}
+
 .m3-progress-track {
   width: 100%;
   height: 4px;
@@ -160,20 +182,10 @@ body.popup-body .m3-card {
 
 .m3-progress-bar {
   height: 100%;
-  width: 45%;
+  width: 0%;
   border-radius: 9999px;
   background-color: var(--m3-primary);
-  transition: width 0.25s ease;
-}
-
-.m3-progress-bar.is-indeterminate {
-  width: 40%;
-  animation: m3-indeterminate 1.1s ease-in-out infinite;
-}
-
-@keyframes m3-indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(260%); }
+  transition: width 0.14s linear;
 }
 
 .m3-sha-box {

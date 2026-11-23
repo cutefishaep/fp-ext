@@ -37,8 +37,14 @@ const sha256HexBuffer = async (arrayBuffer) => {
   return hex;
 };
 
-const handleCheckAndVerifyUpdate = async () => {
+const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
+  const emit = (percent, title, detail = '') => {
+    try { onProgress({ percent, title, detail }); } catch (_) {}
+  };
+
   const currentVersion = chrome.runtime.getManifest().version;
+  emit(8, 'Checking for updates...', 'Fetching latest release metadata from GitHub...');
+
   let release;
   try {
     const res = await fetch(GITHUB_LATEST_RELEASE_URL, {
@@ -69,6 +75,7 @@ const handleCheckAndVerifyUpdate = async () => {
 
   let integrityData = null;
   if (integrityAsset?.browser_download_url) {
+    emit(18, 'Fetching integrity manifest...', 'Downloading integrity.json...');
     try {
       const intRes = await fetch(integrityAsset.browser_download_url, { cache: 'no-store' });
       if (intRes.ok) integrityData = await intRes.json();
@@ -81,6 +88,7 @@ const handleCheckAndVerifyUpdate = async () => {
     expectedPkgSha = String(zipAsset.digest || '').replace(/^sha256:/i, '').trim() ||
       String(integrityData?.packages?.zip?.sha256 || '').trim();
     try {
+      emit(22, 'Downloading release package...', zipAsset.name || 'Downloading ZIP...');
       const zipRes = await fetch(zipAsset.browser_download_url, { cache: 'no-store' });
       if (!zipRes.ok) {
         return {
@@ -90,7 +98,47 @@ const handleCheckAndVerifyUpdate = async () => {
           error: `Failed to download release asset (HTTP ${zipRes.status}).`
         };
       }
-      const buf = await zipRes.arrayBuffer();
+
+      const totalBytes = Number(zipRes.headers.get('content-length')) || Number(zipAsset.size) || 0;
+      let buf;
+      if (zipRes.body && typeof zipRes.body.getReader === 'function') {
+        const reader = zipRes.body.getReader();
+        const chunks = [];
+        let loadedBytes = 0;
+        let lastEmitAt = 0;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value && value.byteLength) {
+            chunks.push(value);
+            loadedBytes += value.byteLength;
+            const now = Date.now();
+            if (now - lastEmitAt >= 40) {
+              lastEmitAt = now;
+              const pct = totalBytes > 0
+                ? Math.min(82, 22 + Math.round((loadedBytes / totalBytes) * 60))
+                : 52;
+              const detail = totalBytes > 0
+                ? `${(loadedBytes / 1024).toFixed(1)} / ${(totalBytes / 1024).toFixed(1)} KB`
+                : `${(loadedBytes / 1024).toFixed(1)} KB`;
+              emit(pct, 'Downloading release package...', detail);
+            }
+          }
+        }
+        const merged = new Uint8Array(loadedBytes);
+        let offset = 0;
+        for (const c of chunks) {
+          merged.set(c, offset);
+          offset += c.byteLength;
+        }
+        buf = merged.buffer;
+        emit(82, 'Downloading release package...', `${(loadedBytes / 1024).toFixed(1)} KB downloaded`);
+      } else {
+        buf = await zipRes.arrayBuffer();
+        emit(82, 'Downloading release package...', `${(buf.byteLength / 1024).toFixed(1)} KB downloaded`);
+      }
+
+      emit(84, 'Verifying package SHA-256...', zipAsset.name || 'Computing SHA-256...');
       actualPkgSha = await sha256HexBuffer(buf);
     } catch (err) {
       return {
@@ -118,9 +166,13 @@ const handleCheckAndVerifyUpdate = async () => {
   }
 
   if (integrityData && integrityData.files && compareVersions(integrityData.version, currentVersion) === 0) {
+    const entries = Object.entries(integrityData.files).filter(([, h]) => Boolean(h));
+    const totalFiles = entries.length || 1;
     const mismatches = [];
-    for (const [fileName, expectedHash] of Object.entries(integrityData.files)) {
-      if (!expectedHash) continue;
+    for (let idx = 0; idx < entries.length; idx++) {
+      const [fileName, expectedHash] = entries[idx];
+      const pct = 86 + Math.round(((idx + 1) / totalFiles) * 12);
+      emit(pct, 'Verifying SHA-256...', `Checking ${fileName} (${idx + 1}/${totalFiles})`);
       try {
         const localRes = await fetch(chrome.runtime.getURL(fileName), { cache: 'no-store' });
         if (!localRes.ok) {
@@ -152,6 +204,8 @@ const handleCheckAndVerifyUpdate = async () => {
       };
     }
   }
+
+  emit(100, 'Verification complete', '100%');
 
   const cachePayload = {
     checkedAt: Date.now(),
@@ -439,6 +493,31 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
     if (sess && sess.verified && sess.version === currentVersion) return;
     const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(candidateUrl)}`;
     chrome.tabs.update(tabId, { url: gateUrl });
+  });
+});
+
+chrome.runtime.onConnect?.addListener((port) => {
+  if (!port || port.name !== 'fa-update-check') return;
+  port.onMessage.addListener((msg) => {
+    if (!msg || msg.type !== 'START') return;
+    handleCheckAndVerifyUpdate((prog) => {
+      try { port.postMessage({ type: 'progress', ...prog }); } catch (_) {}
+    })
+      .then((data) => {
+        try { port.postMessage({ type: 'result', data }); } catch (_) {}
+      })
+      .catch((err) => {
+        try {
+          port.postMessage({
+            type: 'result',
+            data: {
+              status: 'offline',
+              currentVersion: chrome.runtime.getManifest().version,
+              error: err?.message || 'Unexpected verification error.'
+            }
+          });
+        } catch (_) {}
+      });
   });
 });
 

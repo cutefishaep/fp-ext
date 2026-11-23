@@ -7,7 +7,11 @@
   const statusBox = document.getElementById('status-box');
   const statusTitle = document.getElementById('status-title');
   const statusDesc = document.getElementById('status-desc');
+  const progressMeta = document.getElementById('progress-meta');
+  const progressDetail = document.getElementById('progress-detail');
+  const progressPct = document.getElementById('progress-pct');
   const progressTrack = document.getElementById('progress-track');
+  const progressBar = document.getElementById('progress-bar');
   const warningNote = document.getElementById('warning-note');
   const warningQuestion = document.getElementById('warning-question');
   const shaBox = document.getElementById('sha-box');
@@ -41,13 +45,18 @@
 
   const renderChecking = () => {
     clearExtras();
+    progressMeta.classList.remove('hidden');
     progressTrack.classList.remove('hidden');
+    progressBar.style.width = '0%';
+    progressPct.textContent = '0%';
+    progressDetail.textContent = 'Starting...';
     statusTitle.textContent = 'Checking for updates...';
-    statusDesc.textContent = 'Downloading release metadata and verifying SHA-256.';
+    statusDesc.textContent = 'Connecting to GitHub Releases...';
   };
 
   const renderResult = (res) => {
     clearExtras();
+    progressMeta.classList.add('hidden');
     progressTrack.classList.add('hidden');
 
     if (!res || res.status === 'offline') {
@@ -133,7 +142,23 @@
 
   function runCheck() {
     renderChecking();
-    chrome.runtime.sendMessage({ type: 'CHECK_AND_VERIFY_UPDATE' }, renderResult);
+    const port = chrome.runtime.connect({ name: 'fa-update-check' });
+    port.onMessage.addListener((msg) => {
+      if (!msg) return;
+      if (msg.type === 'progress') {
+        const pct = Math.max(0, Math.min(100, Number(msg.percent) || 0));
+        if (msg.title) statusTitle.textContent = msg.title;
+        if (msg.detail) progressDetail.textContent = msg.detail;
+        progressPct.textContent = `${pct}%`;
+        progressBar.style.width = `${pct}%`;
+      } else if (msg.type === 'result') {
+        progressBar.style.width = '100%';
+        progressPct.textContent = '100%';
+        try { port.disconnect(); } catch (_) {}
+        renderResult(msg.data);
+      }
+    });
+    port.postMessage({ type: 'START' });
   }
 
   runCheck();
