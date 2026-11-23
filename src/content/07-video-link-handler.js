@@ -466,12 +466,13 @@
         log('Extension was reloaded — refresh this tab to reconnect stream probe');
       }
       const tikwmData = probeResult?.tikwmData || null;
-      if (!streamUrl && probeResult?.streamUrl) {
+      if (probeResult?.streamUrl) {
         streamUrl = probeResult.streamUrl;
       }
 
       const totalSizeBytes = probeResult?.totalSizeBytes || tikwmData?.size || itemData?.video?.size || 0;
       const atomMeta = probeResult?.atomMeta || null;
+      log(`Probe result (${pageUrl || 'no-url'}): tikwm=${Boolean(tikwmData)}, meta=${atomMeta ? `${atomMeta.width}x${atomMeta.height}@${atomMeta.fps}fps (${totalSizeBytes}B)` : 'none'}`);
       updateProgress(85, 'Decoding timescale, framerate & atom metadata...');
 
       updateProgress(100, 'Quality & Ingest Analysis Complete!');

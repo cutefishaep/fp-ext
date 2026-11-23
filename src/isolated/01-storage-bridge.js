@@ -151,7 +151,94 @@
     }
   };
 
-  // Bridge: MAIN world -> Background Service Worker (TikWM & CDN Range probe)
+  const probeFetchWithTimeout = async (url, options = {}, timeoutMs = 30000) => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+    try {
+      return await fetch(url, { ...options, signal: ctrl.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  const probeVideoDirect = async ({ pageUrl, streamUrl }) => {
+    let tikwmData = null;
+
+    if (pageUrl && typeof pageUrl === 'string' && pageUrl.startsWith('https://www.tiktok.com/')) {
+      const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}&hd=1`;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const twRes = await probeFetchWithTimeout(apiUrl, {}, 30000);
+          if (twRes.ok) {
+            const twJson = await twRes.json();
+            if (twJson && twJson.code === 0 && twJson.data) {
+              tikwmData = twJson.data;
+              break;
+            }
+            if (twJson && twJson.code === -1 && attempt === 0) {
+              await new Promise((r) => setTimeout(r, 1150));
+              continue;
+            }
+          }
+          break;
+        } catch (_) {
+          if (attempt === 0) {
+            await new Promise((r) => setTimeout(r, 1150));
+          }
+        }
+      }
+    }
+
+    const rawCandidates = [
+      tikwmData?.hdplay,
+      tikwmData?.play,
+      tikwmData?.id ? `https://www.tikwm.com/video/media/play/${tikwmData.id}.mp4` : null,
+      streamUrl
+    ];
+    const candidates = [];
+    for (const c of rawCandidates) {
+      if (typeof c === 'string' && c.startsWith('https://') && !candidates.includes(c)) {
+        candidates.push(c);
+      }
+    }
+
+    let resolvedStreamUrl = candidates[0] || null;
+    let totalSizeBytes = tikwmData?.size || 0;
+    let atomMeta = null;
+
+    for (const candUrl of candidates) {
+      try {
+        const fpsApiUrl = `https://www.cutefish.my.id/api/tiktok-fps?url=${encodeURIComponent(candUrl)}`;
+        const probeRes = await probeFetchWithTimeout(fpsApiUrl, {}, 20000);
+        if (probeRes.ok) {
+          const meta = await probeRes.json();
+          if (meta && (meta.width || meta.fps || meta.size)) {
+            resolvedStreamUrl = candUrl;
+            if (meta.size > 0) totalSizeBytes = meta.size;
+            atomMeta = {
+              fps: meta.fps || 0,
+              width: meta.width || 0,
+              height: meta.height || 0,
+              comment: meta.comment || '',
+              duration: meta.duration || 0
+            };
+            if (atomMeta.width && atomMeta.fps) {
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return {
+      tikwmData,
+      streamUrl: resolvedStreamUrl,
+      totalSizeBytes,
+      atomMeta
+    };
+  };
+
+  // Bridge: MAIN world -> Direct OTA probe (tikwm + cutefish.my.id/api/tiktok-fps), fallback to Background
   window.addEventListener('message', (event) => {
     if (event.source !== window || event.origin !== window.location.origin) return;
     const msg = event.data;
@@ -168,16 +255,25 @@
       } catch (_) {}
     };
 
-    if (!isExtensionAlive()) {
-      reply({ error: 'EXTENSION_CONTEXT_INVALIDATED' });
-      return;
-    }
-
-    sendBgMessage({
-      type: 'PROBE_VIDEO',
+    const req = {
       pageUrl: msg.pageUrl || null,
       streamUrl: msg.streamUrl || null
-    }).then((payload) => {
-      reply(payload || null);
-    });
+    };
+
+    probeVideoDirect(req)
+      .then(async (direct) => {
+        if (direct && (direct.tikwmData || (direct.atomMeta && direct.atomMeta.width))) {
+          reply(direct);
+          return;
+        }
+        if (isExtensionAlive()) {
+          const bg = await sendBgMessage({ type: 'PROBE_VIDEO', ...req });
+          if (bg && (bg.tikwmData || (bg.atomMeta && bg.atomMeta.width))) {
+            reply(bg);
+            return;
+          }
+        }
+        reply(direct || null);
+      })
+      .catch(() => reply(null));
   });

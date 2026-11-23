@@ -804,7 +804,7 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
     if (isAllowedUrl(apiUrl, ALLOWED_TIKWM_HOST_RE)) {
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
-          const twRes = await fetchWithTimeout(apiUrl, {}, 12000);
+          const twRes = await fetchWithTimeout(apiUrl, {}, 30000);
           if (twRes.ok) {
             const twJson = await twRes.json();
             if (twJson && twJson.code === 0 && twJson.data) {
@@ -846,7 +846,7 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   for (const candUrl of candidates) {
     try {
       const fpsApiUrl = `https://www.cutefish.my.id/api/tiktok-fps?url=${encodeURIComponent(candUrl)}`;
-      const probeRes = await fetchWithTimeout(fpsApiUrl, {}, 15000);
+      const probeRes = await fetchWithTimeout(fpsApiUrl, {}, 20000);
       if (probeRes.ok) {
         const meta = await probeRes.json();
         if (meta && (meta.width || meta.fps || meta.size)) {
