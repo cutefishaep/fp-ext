@@ -77,6 +77,68 @@ const injectLiveCoreCss = async (tabId) => {
   } catch (_) {}
 };
 
+const USER_SCRIPT_ID = 'fish-acc-core-main';
+const STUDIO_MATCHES = [
+  '*://*.tiktok.com/tiktokstudio*',
+  '*://*.tiktok.com/tiktokstudio',
+  '*://*.tiktok.com/upload*'
+];
+
+const isUserScriptsAvailable = async () => {
+  try {
+    if (!chrome.userScripts) return false;
+    await chrome.userScripts.getScripts({ ids: [USER_SCRIPT_ID] });
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+
+const syncUserScriptCore = async (explicitCode = null) => {
+  if (!(await isUserScriptsAvailable())) return false;
+  let code = typeof explicitCode === 'string' && explicitCode ? explicitCode : '';
+  if (!code) {
+    try {
+      const stored = await chrome.storage?.local?.get(LIVE_CORE_STORAGE_KEY);
+      code = stored?.[LIVE_CORE_STORAGE_KEY]?.contentJs || '';
+    } catch (_) {}
+  }
+  if (!code) {
+    try {
+      const res = await fetch(chrome.runtime.getURL('content.js'), { cache: 'no-store' });
+      if (res.ok) code = await res.text();
+    } catch (_) {}
+  }
+  if (!code) return false;
+
+  try {
+    const existing = await chrome.userScripts.getScripts({ ids: [USER_SCRIPT_ID] });
+    if (existing && existing.length > 0) {
+      await chrome.userScripts.update([{
+        id: USER_SCRIPT_ID,
+        matches: STUDIO_MATCHES,
+        js: [{ code }],
+        world: 'MAIN',
+        runAt: 'document_start'
+      }]);
+    } else {
+      await chrome.userScripts.register([{
+        id: USER_SCRIPT_ID,
+        matches: STUDIO_MATCHES,
+        js: [{ code }],
+        world: 'MAIN',
+        runAt: 'document_start'
+      }]);
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+};
+
+chrome.runtime?.onInstalled?.addListener(() => { syncUserScriptCore(); });
+chrome.runtime?.onStartup?.addListener(() => { syncUserScriptCore(); });
+
 const streamFetchWithProgress = async (url, expectedSize, startPct, endPct, title, emit) => {
   const res = await fetch(url, { cache: 'no-store' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -175,6 +237,14 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   };
 
   const { loaderVersion, coreVersion: currentVersion, bundledCoreVersion } = await getVersions();
+  if (!(await isUserScriptsAvailable())) {
+    return {
+      status: 'user_scripts_disabled',
+      loaderVersion,
+      currentVersion,
+      extensionId: chrome.runtime.id
+    };
+  }
   emit(8, 'Checking for updates...', 'Fetching latest release metadata from GitHub...');
 
   let release;
@@ -206,7 +276,7 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   const hasUpdate = latestVersion ? compareVersions(latestVersion, currentVersion) > 0 : false;
   const needsDownload = Boolean(
     zipAsset?.browser_download_url &&
-    (hasUpdate || !liveCore?.css || (expectedZipSha && liveCore?.zipSha256 && liveCore.zipSha256 !== expectedZipSha.toLowerCase()))
+    (hasUpdate || !liveCore?.css || !liveCore?.contentJs || (expectedZipSha && liveCore?.zipSha256 && liveCore.zipSha256 !== expectedZipSha.toLowerCase()))
   );
 
   let activeZipSha = liveCore?.zipSha256 || expectedZipSha || '';
@@ -239,9 +309,10 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
         };
       }
 
-      emit(82, 'Extracting Core...', 'Reading content.css & core-config.json...');
-      const entries = await extractZipEntries(zipBuf, ['content.css', 'core-config.json', 'integrity.json']);
+      emit(82, 'Extracting Core...', 'Reading content.css, content.js & core-config.json...');
+      const entries = await extractZipEntries(zipBuf, ['content.css', 'content.js', 'core-config.json', 'integrity.json']);
       const cssBytes = entries['content.css'];
+      const jsBytes = entries['content.js'];
       const cfgBytes = entries['core-config.json'];
       const intBytes = entries['integrity.json'];
 
@@ -267,6 +338,27 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
           };
         }
         cssText = new TextDecoder().decode(cssBytes);
+      }
+
+      let contentJsText = '';
+      let actualJsSha = '';
+      if (jsBytes) {
+        actualJsSha = await sha256HexBuffer(jsBytes.buffer.slice(jsBytes.byteOffset, jsBytes.byteOffset + jsBytes.byteLength));
+        const expectedJsSha = String(integrityFiles?.['content.js'] || '').trim();
+        if (expectedJsSha && actualJsSha.toLowerCase() !== expectedJsSha.toLowerCase()) {
+          return {
+            status: 'sha_mismatch',
+            mismatchSource: 'core',
+            loaderVersion,
+            currentVersion,
+            latestVersion,
+            expectedSha: expectedJsSha.toLowerCase(),
+            actualSha: actualJsSha.toLowerCase(),
+            mismatchedFiles: ['content.js'],
+            releaseUrl
+          };
+        }
+        contentJsText = new TextDecoder().decode(jsBytes);
       }
 
       let configObj = null;
@@ -296,6 +388,8 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
           coreVersion: latestVersion || currentVersion,
           css: cssText,
           cssSha256: actualCssSha,
+          contentJs: contentJsText,
+          contentJsSha256: actualJsSha,
           config: configObj,
           configSha256: actualCfgSha,
           zipSha256: actualZipSha,
@@ -303,6 +397,7 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
           updatedAt: Date.now()
         }
       });
+      await syncUserScriptCore(contentJsText);
     } catch (err) {
       return {
         status: 'offline',
@@ -328,11 +423,28 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
         releaseUrl
       };
     }
+    if (liveCore.contentJs) {
+      const cachedJsSha = await sha256HexBuffer(new TextEncoder().encode(liveCore.contentJs).buffer);
+      if (liveCore.contentJsSha256 && cachedJsSha.toLowerCase() !== liveCore.contentJsSha256.toLowerCase()) {
+        return {
+          status: 'sha_mismatch',
+          mismatchSource: 'core',
+          loaderVersion,
+          currentVersion,
+          latestVersion,
+          expectedSha: liveCore.contentJsSha256.toLowerCase(),
+          actualSha: cachedJsSha.toLowerCase(),
+          mismatchedFiles: ['content.js (cached)'],
+          releaseUrl
+        };
+      }
+    }
+    await syncUserScriptCore(liveCore.contentJs || null);
   }
 
   let jsUpdateAvailable = false;
   if (integrityFiles) {
-    const jsFiles = ['content.js', 'isolated.js', 'background.js'];
+    const jsFiles = ['isolated.js', 'background.js'];
     for (let i = 0; i < jsFiles.length; i++) {
       const f = jsFiles[i];
       const expected = integrityFiles[f];
@@ -380,6 +492,43 @@ const handleCheckAndVerifyUpdate = async (onProgress = () => {}) => {
   return {
     status: hasUpdate ? 'updated' : 'ok',
     ...cachePayload
+  };
+};
+
+const handleCheckUpdateStatus = async () => {
+  const { loaderVersion, coreVersion } = await getVersions();
+  let latestVersion = '';
+  let releaseUrl = 'https://github.com/cutefishaep/fp-ext/releases';
+  try {
+    const res = await fetch(GITHUB_LATEST_RELEASE_URL, {
+      headers: { Accept: 'application/vnd.github+json' },
+      cache: 'no-store'
+    });
+    if (res.ok) {
+      const release = await res.json();
+      latestVersion = String(release?.tag_name || '').replace(/^v/i, '');
+      releaseUrl = release?.html_url || releaseUrl;
+    }
+  } catch (_) {}
+
+  if (!latestVersion) {
+    try {
+      const stored = await chrome.storage?.local?.get(LOCAL_UPDATE_CACHE_KEY);
+      const cached = stored?.[LOCAL_UPDATE_CACHE_KEY];
+      if (cached?.latestVersion) {
+        latestVersion = String(cached.latestVersion).replace(/^v/i, '');
+      }
+    } catch (_) {}
+  }
+
+  const hasUpdate = Boolean(latestVersion && compareVersions(latestVersion, coreVersion) > 0);
+  return {
+    ok: true,
+    loaderVersion,
+    coreVersion,
+    latestVersion,
+    hasUpdate,
+    releaseUrl
   };
 };
 
@@ -650,8 +799,25 @@ chrome.tabs?.onRemoved?.addListener((tabId) => {
 });
 
 chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
+  const tabUrl = tab?.url || '';
+  if (changeInfo.status === 'complete' && TIKTOK_STUDIO_URL_RE.test(tabUrl)) {
+    chrome.storage?.session?.get(SESSION_TABS_KEY, (data) => {
+      const tabs = data?.[SESSION_TABS_KEY] || {};
+      const key = String(tabId);
+      const entry = tabs[key];
+      if (entry) {
+        entry.allowNextLoad = false;
+        entry.spaAllowed = true;
+        entry.lastUrl = tabUrl;
+        tabs[key] = entry;
+        chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
+      }
+    });
+    return;
+  }
+
   const isFullLoad = changeInfo.status === 'loading';
-  const candidateUrl = changeInfo.url || (isFullLoad ? tab?.url : null);
+  const candidateUrl = changeInfo.url || (isFullLoad ? tabUrl : null);
   if (!candidateUrl || !TIKTOK_STUDIO_URL_RE.test(candidateUrl)) return;
 
   getVersions().then(({ coreVersion }) => {
@@ -661,11 +827,14 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
       const entry = tabs[key];
 
       if (isFullLoad) {
-        if (entry && entry.allowNextLoad && entry.version === coreVersion && (Date.now() - entry.approvedAt < 20000)) {
-          entry.allowNextLoad = false;
-          entry.spaAllowed = true;
-          tabs[key] = entry;
-          chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
+        const isAllowedInitial = entry && entry.allowNextLoad && entry.version === coreVersion && (Date.now() - entry.approvedAt < 20000);
+        const isInternalStudioNav = Boolean(changeInfo.url && entry && entry.spaAllowed && entry.version === coreVersion && changeInfo.url !== entry.lastUrl);
+        if (isAllowedInitial || isInternalStudioNav) {
+          if (isInternalStudioNav) {
+            entry.lastUrl = candidateUrl;
+            tabs[key] = entry;
+            chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
+          }
           injectLiveCoreCss(tabId);
           return;
         }
@@ -678,7 +847,10 @@ chrome.tabs?.onUpdated?.addListener((tabId, changeInfo, tab) => {
         return;
       }
 
-      if (entry && entry.spaAllowed && entry.version === coreVersion) {
+      if (entry && (entry.spaAllowed || entry.allowNextLoad) && entry.version === coreVersion) {
+        entry.lastUrl = candidateUrl;
+        tabs[key] = entry;
+        chrome.storage.session.set({ [SESSION_TABS_KEY]: tabs });
         injectLiveCoreCss(tabId);
         return;
       }
@@ -756,6 +928,39 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === 'GET_VERSIONS') {
     getVersions().then((v) => sendResponse(v));
+    return true;
+  }
+
+  if (message.type === 'CHECK_UPDATE_STATUS') {
+    handleCheckUpdateStatus()
+      .then((result) => sendResponse(result))
+      .catch(() => getVersions().then((v) => sendResponse({
+        ok: false,
+        loaderVersion: v.loaderVersion,
+        coreVersion: v.coreVersion,
+        latestVersion: '',
+        hasUpdate: false
+      })));
+    return true;
+  }
+
+  if (message.type === 'OPEN_UPDATER_GATE') {
+    const tabId = message.tabId || _sender?.tab?.id;
+    const targetUrl = message.targetUrl || _sender?.tab?.url || 'https://www.tiktok.com/tiktokstudio/upload';
+    if (!tabId) {
+      sendResponse({ ok: false });
+      return false;
+    }
+    chrome.storage?.session?.get(SESSION_TABS_KEY, (data) => {
+      const tabs = data?.[SESSION_TABS_KEY] || {};
+      delete tabs[String(tabId)];
+      chrome.storage?.session?.set({ [SESSION_TABS_KEY]: tabs }, () => {
+        const gateUrl = `${chrome.runtime.getURL('updater.html')}?target=${encodeURIComponent(targetUrl)}`;
+        chrome.tabs.update(tabId, { url: gateUrl }, () => {
+          sendResponse({ ok: true });
+        });
+      });
+    });
     return true;
   }
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Fish Acceleration",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Desktop UA, Material 3 Dark theme & 1:1 Ingest Bypass for TikTok Studio.",
   "icons": {
     "16": "icons/icon16.png",
@@ -18,7 +18,8 @@
     "storage",
     "tabs",
     "scripting",
-    "offscreen"
+    "offscreen",
+    "userScripts"
   ],
   "host_permissions": [
     "*://*.tiktok.com/*",
@@ -49,16 +50,6 @@
     ]
   },
   "content_scripts": [
-    {
-      "matches": [
-        "*://*.tiktok.com/tiktokstudio*",
-        "*://*.tiktok.com/tiktokstudio",
-        "*://*.tiktok.com/upload*"
-      ],
-      "js": ["content.js"],
-      "world": "MAIN",
-      "run_at": "document_start"
-    },
     {
       "matches": [
         "*://*.tiktok.com/tiktokstudio*",

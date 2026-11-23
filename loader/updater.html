@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fish Acceleration — Update & Integrity Check</title>
+  <link rel="stylesheet" href="ui-m3.css" />
+</head>
+<body class="gate-body">
+  <main class="m3-card">
+    <header class="m3-header">
+      <div class="m3-brand">
+        <img class="m3-logo" src="icons/icon32.png" alt="Fish Acceleration" />
+        <div class="m3-brand-text">
+          <span class="m3-title">Fish Acceleration</span>
+          <span class="m3-loader-sub" id="loader-version">Loader v1.0</span>
+        </div>
+      </div>
+      <span class="m3-version-pill" id="version-pill">v0.0.0</span>
+    </header>
+
+    <section class="m3-status-box" id="status-box">
+      <div class="m3-status-title" id="status-title">Checking for updates...</div>
+      <div class="m3-status-desc" id="status-desc">Fetching latest release and verifying SHA-256 before opening TikTok Studio.</div>
+      <div class="m3-progress-meta" id="progress-meta">
+        <span id="progress-detail">Starting...</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="m3-progress-track" id="progress-track">
+        <div class="m3-progress-bar" id="progress-bar" style="width: 0%;"></div>
+      </div>
+      <div class="m3-note hidden" id="warning-note"></div>
+      <div class="m3-question hidden" id="warning-question"></div>
+      <div class="m3-chrome-mock hidden" id="user-scripts-mockup"></div>
+      <div class="m3-sha-box hidden" id="sha-box"></div>
+    </section>
+
+    <footer class="m3-actions" id="actions"></footer>
+  </main>
+  <script src="updater.js"></script>
+</body>
+</html>

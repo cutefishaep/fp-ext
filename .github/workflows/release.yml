@@ -62,10 +62,10 @@ jobs:
         run: |
           ZIP="build/loader.zip"
           CRX="build/loader.crx"
-          CANARY="build/canary-mv2.zip"
+          CORE="build/core.zip"
           test -s "$ZIP"
           test -s "$CRX"
-          test -s "$CANARY"
+          test -s "$CORE"
           node -e "
             const fs = require('fs');
             const crx = fs.readFileSync('${CRX}');
@@ -74,7 +74,7 @@ jobs:
             }
             console.log('Verified CRX3 header: Cr24 v3');
           "
-          ls -lh "$ZIP" "$CRX"
+          ls -lh "$ZIP" "$CRX" "$CORE"
 
       - name: Generate release notes
         shell: bash
@@ -101,9 +101,6 @@ jobs:
             echo "**Opsi 2 — Paket CRX (\`loader.crx\`):**"
             echo "1. Download \`loader.crx\`"
             echo "2. Buka \`chrome://extensions\` → aktifkan **Developer mode** → drag & drop file \`loader.crx\`"
-            echo ""
-            echo "**Opsi 3 — Canary MV2 (\`canary-mv2.zip\`):**"
-            echo "1. Download & extract \`canary-mv2.zip\` (untuk browser yang mendukung Manifest V2: Brave, Firefox, Kiwi/Cromite)"
             if [ -n "$PREV" ]; then
               echo ""
               echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV}...${TAG}"
@@ -120,13 +117,13 @@ jobs:
           VER="${{ steps.meta.outputs.version }}"
           ZIP="build/loader.zip"
           CRX="build/loader.crx"
-          CANARY="build/canary-mv2.zip"
+          CORE="build/core.zip"
 
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$ZIP" "$CRX" "$CANARY" --clobber
+            gh release upload "$TAG" "$ZIP" "$CRX" "$CORE" --clobber
             gh release edit "$TAG" --title "Fish Acceleration v${VER}" --notes-file release-notes.md
           else
-            gh release create "$TAG" "$ZIP" "$CRX" "$CANARY" \
+            gh release create "$TAG" "$ZIP" "$CRX" "$CORE" \
               --title "Fish Acceleration v${VER}" \
               --notes-file release-notes.md \
               --latest

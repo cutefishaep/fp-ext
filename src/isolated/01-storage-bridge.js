@@ -32,35 +32,70 @@
     } catch (_) {}
   };
 
-  const isExtensionAlive = () => typeof chrome !== 'undefined' && Boolean(chrome.runtime?.id);
+  const isExtensionAlive = () =>
+    typeof chrome !== 'undefined' &&
+    typeof chrome.runtime?.sendMessage === 'function';
+
+  const sendBgMessage = (payload) => new Promise((resolve) => {
+    if (!isExtensionAlive()) {
+      resolve(null);
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage(payload, (res) => {
+        if (chrome.runtime?.lastError) {
+          resolve(null);
+          return;
+        }
+        resolve(res ?? null);
+      });
+    } catch (_) {
+      resolve(null);
+    }
+  });
+
+  const coreStorageGet = async (keys) => {
+    if (isExtensionAlive() && chrome.storage?.local) {
+      try { return await chrome.storage.local.get(keys); } catch (_) {}
+    }
+    const res = await sendBgMessage({ type: 'CORE_STORAGE_GET', keys });
+    return (res && typeof res === 'object' && res.data) ? res.data : {};
+  };
+
+  const coreStorageSet = (items) => {
+    if (isExtensionAlive() && chrome.storage?.local) {
+      try { chrome.storage.local.set(items); return; } catch (_) {}
+    }
+    sendBgMessage({ type: 'CORE_STORAGE_SET', items });
+  };
 
   const setBypassUploadEnabled = (enabled) => {
     _bypassEnabled = Boolean(enabled);
-    if (isExtensionAlive() && chrome.storage?.local) {
-      try { chrome.storage.local.set({ [STORAGE_KEYS.enabled]: _bypassEnabled }); } catch (_) {}
+    if (isExtensionAlive()) {
+      coreStorageSet({ [STORAGE_KEYS.enabled]: _bypassEnabled });
     }
     syncSettingsToPage();
   };
 
   const setBypassWatermark = (val) => {
     _bypassWatermark = typeof val === 'string' ? val : '';
-    if (isExtensionAlive() && chrome.storage?.local) {
-      try { chrome.storage.local.set({ [STORAGE_KEYS.watermark]: _bypassWatermark }); } catch (_) {}
+    if (isExtensionAlive()) {
+      coreStorageSet({ [STORAGE_KEYS.watermark]: _bypassWatermark });
     }
     syncSettingsToPage();
   };
 
   const setCompressVideoEnabled = (enabled) => {
     _compressEnabled = Boolean(enabled);
-    if (isExtensionAlive() && chrome.storage?.local) {
-      try { chrome.storage.local.set({ [STORAGE_KEYS.compress]: _compressEnabled }); } catch (_) {}
+    if (isExtensionAlive()) {
+      coreStorageSet({ [STORAGE_KEYS.compress]: _compressEnabled });
     }
   };
 
   const initSettings = async () => {
     try {
-      if (isExtensionAlive() && chrome.storage?.local) {
-        const stored = await chrome.storage.local.get([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark, STORAGE_KEYS.compress, 'fa_live_core']);
+      if (isExtensionAlive()) {
+        const stored = await coreStorageGet([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark, STORAGE_KEYS.compress, 'fa_live_core']);
         _liveConfig = stored.fa_live_core?.config || null;
         if (typeof stored[STORAGE_KEYS.compress] === 'boolean') {
           _compressEnabled = stored[STORAGE_KEYS.compress];
@@ -91,7 +126,7 @@
         }
 
         if (needsPersist) {
-          chrome.storage.local.set(toPersist).catch(() => {});
+          coreStorageSet(toPersist);
         }
       }
 
@@ -122,22 +157,16 @@
       } catch (_) {}
     };
 
-    if (!isExtensionAlive() || typeof chrome.runtime.sendMessage !== 'function') {
+    if (!isExtensionAlive()) {
       reply({ error: 'EXTENSION_CONTEXT_INVALIDATED' });
       return;
     }
 
-    try {
-      chrome.runtime.sendMessage({
-        type: 'PROBE_VIDEO',
-        pageUrl: msg.pageUrl || null,
-        streamUrl: msg.streamUrl || null
-      }).then((payload) => {
-        reply(payload || null);
-      }).catch(() => {
-        reply(null);
-      });
-    } catch (_) {
-      reply(null);
-    }
+    sendBgMessage({
+      type: 'PROBE_VIDEO',
+      pageUrl: msg.pageUrl || null,
+      streamUrl: msg.streamUrl || null
+    }).then((payload) => {
+      reply(payload || null);
+    });
   });

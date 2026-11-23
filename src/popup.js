@@ -20,6 +20,7 @@
   const progressBar = document.getElementById('progress-bar');
   const warningNote = document.getElementById('warning-note');
   const warningQuestion = document.getElementById('warning-question');
+  const userScriptsMockup = document.getElementById('user-scripts-mockup');
   const shaBox = document.getElementById('sha-box');
   const actionsEl = document.getElementById('actions');
 
@@ -29,6 +30,10 @@
     statusBox.classList.remove('is-error');
     warningNote.classList.add('hidden');
     warningQuestion.classList.add('hidden');
+    if (userScriptsMockup) {
+      userScriptsMockup.classList.add('hidden');
+      userScriptsMockup.innerHTML = '';
+    }
     shaBox.classList.add('hidden');
     shaBox.innerHTML = '';
     actionsEl.innerHTML = '';
@@ -65,6 +70,22 @@
     clearExtras();
     progressMeta.classList.add('hidden');
     progressTrack.classList.add('hidden');
+
+    if (res?.status === 'user_scripts_disabled') {
+      statusTitle.textContent = 'Enable User Scripts';
+      statusDesc.textContent =
+        'Open Extension Details and turn on "Allow User Scripts", then click Retry.';
+      if (userScriptsMockup) {
+        userScriptsMockup.innerHTML =
+          '<img class="m3-mock-img" src="assets/allow-user-scripts.png" alt="Enable Allow User Scripts in Chrome Extension Details" />';
+        userScriptsMockup.classList.remove('hidden');
+      }
+      addButton('Open Details', 'm3-btn-secondary', () => {
+        chrome.tabs.create({ url: `chrome://extensions/?id=${res.extensionId || chrome.runtime.id}` });
+      });
+      addButton('Retry', 'm3-btn-primary', runCheck);
+      return;
+    }
 
     if (!res || res.status === 'offline') {
       statusTitle.textContent = 'Unable to reach GitHub';
@@ -105,7 +126,7 @@
     if (res.status === 'updated') {
       if (versionPill && res.latestVersion) versionPill.textContent = `Core v${res.latestVersion}`;
       statusTitle.textContent = `Core updated to v${res.latestVersion}`;
-      statusDesc.textContent = 'Live CSS & config updated in extension storage (SHA-256 verified).';
+      statusDesc.textContent = 'Live Core (JS, CSS & config) updated and verified (SHA-256).';
       if (res.coreSha256) {
         shaBox.innerHTML = `<span class="m3-sha-label">SHA-256:</span> ${res.coreSha256}`;
         shaBox.classList.remove('hidden');
@@ -139,9 +160,7 @@
     } else {
       addButton('Check Again', 'm3-btn-secondary', runCheck);
     }
-    addButton('Open TikTok Studio', 'm3-btn-primary', () => {
-      chrome.runtime.sendMessage({ type: 'APPROVE_SESSION', bypassed: false }, openStudio);
-    });
+    addButton('Open TikTok Studio', 'm3-btn-primary', () => openStudio(false));
   };
 
   function runCheck() {

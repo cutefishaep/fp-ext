@@ -6,6 +6,8 @@
   if (!_bootPath.startsWith('/tiktokstudio') && !_bootPath.startsWith('/upload')) {
     return;
   }
+  if (window.__fishAccMainBooted) return;
+  window.__fishAccMainBooted = true;
 
   /* --- 0. React & DOM Reconciliation Safeguard ---
    * Protect against React 18 / Tux crashing with NotFoundError:

@@ -113,8 +113,137 @@
     return file;
   };
 
+  const _uploadVersionState = {
+    coreVersion: '',
+    latestVersion: '',
+    hasUpdate: false,
+    updating: false,
+    checking: false
+  };
+  let _lastVersionCheckAt = 0;
+
+  const sendRuntimeMsg = (payload) => new Promise((resolve) => {
+    if (!isExtensionAlive() || !chrome.runtime?.sendMessage) {
+      resolve(null);
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage(payload, (res) => {
+        if (chrome.runtime?.lastError) {
+          resolve(null);
+          return;
+        }
+        resolve(res || null);
+      });
+    } catch (_) {
+      resolve(null);
+    }
+  });
+
+  const renderUploadVersionBadge = () => {
+    const badge = document.getElementById('m3-upload-version-badge');
+    if (!badge) return;
+
+    badge.classList.toggle('has-update', Boolean(_uploadVersionState.hasUpdate && !_uploadVersionState.updating));
+    badge.classList.toggle('is-updating', Boolean(_uploadVersionState.updating));
+    badge.classList.toggle('is-checking', Boolean(_uploadVersionState.checking));
+    badge.disabled = Boolean(_uploadVersionState.updating || _uploadVersionState.checking);
+
+    if (_uploadVersionState.updating) {
+      badge.title = 'Downloading & verifying update...';
+      badge.innerHTML = '<span>Updating...</span>';
+      return;
+    }
+
+    if (_uploadVersionState.checking) {
+      badge.title = 'Checking for updates...';
+      badge.innerHTML = '<span>Checking...</span>';
+      return;
+    }
+
+    if (_uploadVersionState.hasUpdate) {
+      const nextVer = _uploadVersionState.latestVersion ? `v${_uploadVersionState.latestVersion}` : 'latest';
+      const curVer = _uploadVersionState.coreVersion ? ` (current v${_uploadVersionState.coreVersion})` : '';
+      badge.title = `Update available: ${nextVer}${curVer} — Click to update & refresh`;
+      badge.innerHTML = `
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
+          <path d="M5 20h14v-2H5v2zm14-11h-4V3H9v6H5l7 7 7-7z"/>
+        </svg>
+        <span>Update</span>
+      `;
+      return;
+    }
+
+    const verLabel = _uploadVersionState.coreVersion ? `v${escapeHtmlAttr(_uploadVersionState.coreVersion)}` : 'v...';
+    badge.title = _uploadVersionState.coreVersion
+      ? `Fish Acceleration Core v${_uploadVersionState.coreVersion} — Click to check for updates`
+      : 'Check for updates';
+    badge.innerHTML = `<span>${verLabel}</span>`;
+  };
+
+  const refreshUploadVersionBadge = async (force = false) => {
+    if (!_uploadVersionState.coreVersion) {
+      const ver = await sendRuntimeMsg({ type: 'GET_VERSIONS' });
+      if (ver?.coreVersion) {
+        _uploadVersionState.coreVersion = String(ver.coreVersion);
+        renderUploadVersionBadge();
+      }
+    }
+
+    const now = Date.now();
+    if (!force && _lastVersionCheckAt && (now - _lastVersionCheckAt < 30000)) {
+      renderUploadVersionBadge();
+      return;
+    }
+    _lastVersionCheckAt = now;
+
+    const status = await sendRuntimeMsg({ type: 'CHECK_UPDATE_STATUS' });
+    if (status) {
+      if (status.coreVersion) _uploadVersionState.coreVersion = String(status.coreVersion);
+      _uploadVersionState.latestVersion = status.latestVersion ? String(status.latestVersion) : '';
+      _uploadVersionState.hasUpdate = Boolean(status.hasUpdate);
+      renderUploadVersionBadge();
+    }
+  };
+
+  const handleUploadVersionBadgeClick = async (e) => {
+    e.preventDefault();
+    if (_uploadVersionState.updating || _uploadVersionState.checking) return;
+
+    if (_uploadVersionState.hasUpdate) {
+      _uploadVersionState.updating = true;
+      renderUploadVersionBadge();
+
+      const res = await sendRuntimeMsg({ type: 'CHECK_AND_VERIFY_UPDATE' });
+      if (res?.status === 'updated' || res?.status === 'ok') {
+        await sendRuntimeMsg({ type: 'APPROVE_SESSION', bypassed: false });
+        window.location.reload();
+        return;
+      }
+
+      if (res?.status === 'sha_mismatch' || res?.status === 'user_scripts_disabled') {
+        await sendRuntimeMsg({ type: 'OPEN_UPDATER_GATE', targetUrl: window.location.href });
+        return;
+      }
+
+      _uploadVersionState.updating = false;
+      renderUploadVersionBadge();
+      const badge = document.getElementById('m3-upload-version-badge');
+      if (badge && res?.error) {
+        badge.title = `Update failed: ${res.error} — Click to retry`;
+      }
+      return;
+    }
+
+    _uploadVersionState.checking = true;
+    renderUploadVersionBadge();
+    await refreshUploadVersionBadge(true);
+    _uploadVersionState.checking = false;
+    renderUploadVersionBadge();
+  };
+
   const removeUploadBypassCard = () => {
-    ['m3-bypass-upload-card', 'm3-bypass-credit', 'm3-upload-page-back-btn'].forEach((id) => {
+    ['m3-bypass-upload-card', 'm3-bypass-credit', 'm3-upload-top-bar', 'm3-upload-page-back-btn'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
@@ -135,10 +264,14 @@
 
     updateMethodStatusBadge();
 
-    // 1. Tombol Back to Posts di atas Upload Container
-    let backBtn = document.getElementById('m3-upload-page-back-btn');
-    if (!backBtn) {
-      backBtn = document.createElement('button');
+    // 1. Top Bar di atas Upload Container: Back to Posts (kiri) + Version / Update Badge (kanan)
+    let topBar = document.getElementById('m3-upload-top-bar');
+    if (!topBar) {
+      topBar = document.createElement('div');
+      topBar.id = 'm3-upload-top-bar';
+      topBar.className = 'm3-upload-top-bar';
+
+      const backBtn = document.createElement('button');
       backBtn.id = 'm3-upload-page-back-btn';
       backBtn.type = 'button';
       backBtn.className = 'm3-upload-page-back-btn';
@@ -158,15 +291,28 @@
           window.location.href = 'https://www.tiktok.com/tiktokstudio/content';
         }
       });
+
+      const versionBadge = document.createElement('button');
+      versionBadge.id = 'm3-upload-version-badge';
+      versionBadge.type = 'button';
+      versionBadge.className = 'm3-upload-version-badge';
+      versionBadge.addEventListener('click', handleUploadVersionBadgeClick);
+
+      topBar.appendChild(backBtn);
+      topBar.appendChild(versionBadge);
+
       try {
-        uploadContainer.before(backBtn);
+        uploadContainer.before(topBar);
       } catch (_) {
         try {
           if (uploadContainer.parentNode && uploadContainer.parentNode.contains(uploadContainer)) {
-            uploadContainer.parentNode.insertBefore(backBtn, uploadContainer);
+            uploadContainer.parentNode.insertBefore(topBar, uploadContainer);
           }
         } catch (_) {}
       }
+
+      renderUploadVersionBadge();
+      refreshUploadVersionBadge(false);
     }
 
     if (document.getElementById('m3-bypass-upload-card')) return;

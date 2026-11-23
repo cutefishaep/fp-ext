@@ -33,6 +33,7 @@
   const progressBar = document.getElementById('progress-bar');
   const warningNote = document.getElementById('warning-note');
   const warningQuestion = document.getElementById('warning-question');
+  const userScriptsMockup = document.getElementById('user-scripts-mockup');
   const shaBox = document.getElementById('sha-box');
   const actionsEl = document.getElementById('actions');
 
@@ -42,6 +43,10 @@
     statusBox.classList.remove('is-error');
     warningNote.classList.add('hidden');
     warningQuestion.classList.add('hidden');
+    if (userScriptsMockup) {
+      userScriptsMockup.classList.add('hidden');
+      userScriptsMockup.innerHTML = '';
+    }
     shaBox.classList.add('hidden');
     shaBox.innerHTML = '';
     actionsEl.innerHTML = '';
@@ -88,6 +93,22 @@
     clearExtras();
     progressMeta.classList.add('hidden');
     progressTrack.classList.add('hidden');
+
+    if (res?.status === 'user_scripts_disabled') {
+      statusTitle.textContent = 'Enable User Scripts';
+      statusDesc.textContent =
+        'Open Extension Details and turn on "Allow User Scripts", then click Retry.';
+      if (userScriptsMockup) {
+        userScriptsMockup.innerHTML =
+          '<img class="m3-mock-img" src="assets/allow-user-scripts.png" alt="Enable Allow User Scripts in Chrome Extension Details" />';
+        userScriptsMockup.classList.remove('hidden');
+      }
+      addButton('Open Extension Details', 'm3-btn-secondary', () => {
+        chrome.tabs.create({ url: `chrome://extensions/?id=${res.extensionId || chrome.runtime.id}` });
+      });
+      addButton('Retry', 'm3-btn-primary', runGate);
+      return;
+    }
 
     if (!res || res.status === 'offline') {
       statusTitle.textContent = 'Unable to verify update';

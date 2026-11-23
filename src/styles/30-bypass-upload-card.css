@@ -1,4 +1,74 @@
 /* ==========================================================================
+   Material 3 Upload Top Bar (Back to Posts kiri + Version / Update Badge kanan)
+   ========================================================================== */
+.m3-upload-top-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100% !important;
+  max-width: 800px !important;
+  margin: 0 auto 12px auto !important;
+  box-sizing: border-box !important;
+}
+
+.m3-upload-top-bar .m3-upload-page-back-btn {
+  margin-bottom: 0 !important;
+}
+
+.m3-upload-version-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  border-radius: 9999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #f2f7f2 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.m3-upload-version-badge:hover:not(:disabled) {
+  background: rgba(163, 219, 167, 0.18) !important;
+  border-color: #a3dba7 !important;
+  color: #a3dba7 !important;
+}
+
+.m3-upload-version-badge.has-update {
+  background: #a3dba7 !important;
+  border-color: #a3dba7 !important;
+  color: #053311 !important;
+}
+
+.m3-upload-version-badge.has-update:hover:not(:disabled) {
+  background: #baf0be !important;
+  border-color: #baf0be !important;
+  color: #053311 !important;
+}
+
+.m3-upload-version-badge.is-updating,
+.m3-upload-version-badge.is-checking,
+.m3-upload-version-badge:disabled {
+  opacity: 0.72 !important;
+  cursor: wait !important;
+}
+
+.m3-upload-version-badge svg {
+  width: 16px !important;
+  height: 16px !important;
+  fill: currentColor !important;
+  flex-shrink: 0 !important;
+}
+
+/* ==========================================================================
    Material 3 1:1 Bypass Upload Control Card (/tiktokstudio/upload)
    ========================================================================== */
 .m3-bypass-card {

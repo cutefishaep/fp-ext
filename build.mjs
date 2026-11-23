@@ -60,7 +60,11 @@ function buildContentJs() {
     chunks.push(readTextLf(join(root, 'asset/engines/soundsafe-hook.js')));
   }
 
-  writeAndReport('src/content.js', chunks.join(''), files.length + 1, true);
+  const out = chunks.join('');
+  checkJsSyntax(out, 'core/content.js');
+  const kb = (Buffer.byteLength(out) / 1024).toFixed(1);
+  console.log(`✓ ${'core/content.js'.padEnd(18)} ${String(files.length + 1).padStart(2)} parts  ${kb.padStart(8)} KB`);
+  return out;
 }
 
 function buildIsolatedJs() {
@@ -84,7 +88,11 @@ function buildIsolatedJs() {
     throw new Error('Expected 00-header.js in src/isolated/ to wrap bundled engines.');
   }
 
-  writeAndReport('src/isolated.js', chunks.join(''), files.length + 2, true);
+  const out = chunks.join('');
+  checkJsSyntax(out, 'core/isolated.js');
+  const kb = (Buffer.byteLength(out) / 1024).toFixed(1);
+  console.log(`✓ ${'core/isolated.js'.padEnd(18)} ${String(files.length + 2).padStart(2)} parts  ${kb.padStart(8)} KB`);
+  return out;
 }
 
 function concatCss() {
@@ -94,7 +102,9 @@ function concatCss() {
     .sort();
   if (files.length === 0) throw new Error('No .css parts found in src/styles/');
   const out = files.map((f) => readTextLf(join(abs, f))).join('');
-  writeAndReport('src/content.css', out, files.length, false);
+  const kb = (Buffer.byteLength(out) / 1024).toFixed(1);
+  console.log(`✓ ${'core/content.css'.padEnd(18)} ${String(files.length).padStart(2)} parts  ${kb.padStart(8)} KB`);
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -256,62 +266,24 @@ function createCrx3(zipBuffer) {
   return { crxBuffer: Buffer.concat([preamble, header, zipBuffer]), source };
 }
 
-function packZipAndCrx() {
-  const manifest = JSON.parse(readTextLf(join(root, 'src/manifest.json')));
+function packCoreZip({ contentJs, isolatedJs, contentCss }) {
+  const loaderManifest = JSON.parse(readTextLf(join(root, 'loader/manifest.json')));
   const coreMeta = existsSync(join(root, 'src/core-version.json'))
     ? JSON.parse(readTextLf(join(root, 'src/core-version.json')))
     : {};
-  const loaderVersion = manifest.version;
+  const loaderVersion = loaderManifest.version;
   const coreVersion = coreMeta.coreVersion || loaderVersion;
-  const slug = String(manifest.name || 'extension')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  const zipName = 'loader.zip';
-  const crxName = 'loader.crx';
 
   const outDir = join(root, 'build');
   mkdirSync(outDir, { recursive: true });
 
-  for (const f of readdirSync(outDir)) {
-    if (new RegExp(`^(${slug}-v[\\d.]+|loader)\\.(zip|crx)$`).test(f) && f !== zipName && f !== crxName) {
-      unlinkSync(join(outDir, f));
-      console.log(`- removed old ${f}`);
-    }
-  }
-
-  const runtimeFiles = [
-    'manifest.json',
-    'core-version.json',
-    'core-config.json',
-    'boot-dark.css',
-    'content.js',
-    'isolated.js',
-    'background.js',
-    'content.css',
-    'rules.json',
-    'ui-m3.css',
-    'popup.html',
-    'popup.js',
-    'updater.html',
-    'updater.js',
-    'offscreen.html',
-    'offscreen.js',
-    'ffmpeg-worker.js',
-    'vendor/ffmpeg-core.js'
+  const files = [
+    { name: 'content.js', data: Buffer.from(contentJs, 'utf8') },
+    { name: 'isolated.js', data: Buffer.from(isolatedJs, 'utf8') },
+    { name: 'content.css', data: Buffer.from(contentCss, 'utf8') },
+    { name: 'core-config.json', data: Buffer.from(readTextLf(join(root, 'src/core-config.json')), 'utf8') },
+    { name: 'core-version.json', data: Buffer.from(readTextLf(join(root, 'src/core-version.json')), 'utf8') }
   ];
-  const files = runtimeFiles.map((name) => {
-    const fullPath = join(root, 'src', name);
-    if (/\.(js|css|html|json)$/i.test(name)) {
-      const normalized = readTextLf(fullPath);
-      writeFileSync(fullPath, normalized, 'utf8');
-      return { name, data: Buffer.from(normalized, 'utf8') };
-    }
-    return { name, data: readFileSync(fullPath) };
-  });
-
-  const iconFiles = new Set(Object.values(manifest.icons || {}));
-  for (const iconPath of iconFiles) {
-    files.push({ name: iconPath, data: readFileSync(join(root, 'src', iconPath)) });
-  }
 
   const sha256Hex = (buf) => createHash('sha256').update(buf).digest('hex');
   const fileHashes = {};
@@ -329,11 +301,68 @@ function packZipAndCrx() {
     data: Buffer.from(JSON.stringify(integrity, null, 2) + '\n', 'utf8')
   });
 
+  const coreZipBuffer = createZip(files);
+  const coreZipPath = join(outDir, 'core.zip');
+  writeFileSync(coreZipPath, coreZipBuffer);
+  const kb = (coreZipBuffer.length / 1024).toFixed(1);
+  console.log(`✓ build/${'core.zip'.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB compressed)`);
+}
+
+function packLoaderZipAndCrx() {
+  const loaderDir = join(root, 'loader');
+  const manifest = JSON.parse(readTextLf(join(loaderDir, 'manifest.json')));
+  const slug = String(manifest.name || 'extension')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  const zipName = 'loader.zip';
+  const crxName = 'loader.crx';
+
+  const outDir = join(root, 'build');
+  mkdirSync(outDir, { recursive: true });
+
+  for (const f of readdirSync(outDir)) {
+    if (new RegExp(`^(${slug}-v[\\d.]+|loader)\\.(zip|crx)$`).test(f) && f !== zipName && f !== crxName) {
+      unlinkSync(join(outDir, f));
+      console.log(`- removed old ${f}`);
+    }
+  }
+
+  // Pure Loader files ONLY — zero feature JS/CSS (content.js, isolated.js, content.css are fetched live from core.zip)
+  const loaderFiles = [
+    'manifest.json',
+    'boot-dark.css',
+    'background.js',
+    'rules.json',
+    'ui-m3.css',
+    'popup.html',
+    'popup.js',
+    'updater.html',
+    'updater.js',
+    'offscreen.html',
+    'offscreen.js',
+    'ffmpeg-worker.js',
+    'vendor/ffmpeg-core.js',
+    'assets/allow-user-scripts.png'
+  ];
+
+  const files = loaderFiles.map((name) => {
+    const fullPath = join(loaderDir, name);
+    if (/\.(js|css|html|json)$/i.test(name)) {
+      const normalized = readTextLf(fullPath);
+      return { name, data: Buffer.from(normalized, 'utf8') };
+    }
+    return { name, data: readFileSync(fullPath) };
+  });
+
+  const iconFiles = new Set(Object.values(manifest.icons || {}));
+  for (const iconPath of iconFiles) {
+    files.push({ name: iconPath, data: readFileSync(join(loaderDir, iconPath)) });
+  }
+
   const zipBuffer = createZip(files);
   const zipPath = join(outDir, zipName);
   writeFileSync(zipPath, zipBuffer);
-  const kb = (files.reduce((n, f) => n + f.data.length, 0) / 1024).toFixed(0);
-  console.log(`✓ build/${zipName.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB uncompressed)`);
+  const kb = (zipBuffer.length / 1024).toFixed(1);
+  console.log(`✓ build/${zipName.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB compressed, pure loader)`);
 
   const { crxBuffer, source } = createCrx3(zipBuffer);
   const crxPath = join(outDir, crxName);
@@ -342,58 +371,13 @@ function packZipAndCrx() {
   console.log(`✓ build/${crxName.padEnd(30)} CRX3      (${crxKb} KB, key: ${source})`);
 }
 
-function packCanaryMv2() {
-  const outDir = join(root, 'build');
-  mkdirSync(outDir, { recursive: true });
-
-  const canaryBg = readTextLf(join(root, 'canary/background.js'));
-  const canaryBridge = readTextLf(join(root, 'canary/main-bridge.js'));
-  checkJsSyntax(canaryBg, 'canary/background.js');
-  checkJsSyntax(canaryBridge, 'canary/main-bridge.js');
-
-  const manifest = JSON.parse(readTextLf(join(root, 'canary/manifest.json')));
-  const sharedFiles = [
-    'core-version.json',
-    'core-config.json',
-    'boot-dark.css',
-    'content.js',
-    'isolated.js',
-    'content.css',
-    'ui-m3.css',
-    'popup.html',
-    'popup.js',
-    'updater.html',
-    'updater.js',
-    'ffmpeg-worker.js',
-    'vendor/ffmpeg-core.js'
-  ];
-
-  const files = [
-    { name: 'manifest.json', data: Buffer.from(readTextLf(join(root, 'canary/manifest.json')), 'utf8') },
-    { name: 'background.js', data: Buffer.from(canaryBg, 'utf8') },
-    { name: 'main-bridge.js', data: Buffer.from(canaryBridge, 'utf8') },
-    ...sharedFiles.map((name) => ({
-      name,
-      data: Buffer.from(readTextLf(join(root, 'src', name)), 'utf8')
-    }))
-  ];
-
-  const iconFiles = new Set(Object.values(manifest.icons || {}));
-  for (const iconPath of iconFiles) {
-    files.push({ name: iconPath, data: readFileSync(join(root, 'src', iconPath)) });
-  }
-
-  const canaryZip = createZip(files);
-  writeFileSync(join(outDir, 'canary-mv2.zip'), canaryZip);
-  const kb = (files.reduce((n, f) => n + f.data.length, 0) / 1024).toFixed(0);
-  console.log(`✓ build/${'canary-mv2.zip'.padEnd(30)} ${String(files.length).padStart(2)} files   (${kb} KB uncompressed)`);
+console.log('Building Fish Acceleration (Pure Loader + Core)...');
+for (const f of ['background.js', 'popup.js', 'updater.js', 'offscreen.js', 'ffmpeg-worker.js']) {
+  checkJsSyntax(readTextLf(join(root, 'loader', f)), `loader/${f}`);
 }
-
-console.log('Building Fish Acceleration...');
-checkJsSyntax(readFileSync(join(root, 'src/background.js'), 'utf8'), 'src/background.js');
-buildContentJs();
-buildIsolatedJs();
-concatCss();
-packZipAndCrx();
-packCanaryMv2();
-console.log('Done. Reload the extension in chrome://extensions to apply.');
+const contentJs = buildContentJs();
+const isolatedJs = buildIsolatedJs();
+const contentCss = concatCss();
+packCoreZip({ contentJs, isolatedJs, contentCss });
+packLoaderZipAndCrx();
+console.log('Done. Pure Loader (loader.zip/loader.crx) & Core (core.zip) built in build/.');
