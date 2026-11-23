@@ -53,11 +53,15 @@
 
   const syncCardControlsFromState = () => {
     const toggle = document.getElementById('m3-bypass-toggle');
+    const compressToggle = document.getElementById('m3-compress-toggle');
     const wmRow = document.getElementById('m3-watermark-row');
     const wmInput = document.getElementById('m3-watermark-input');
     const enabled = isBypassUploadEnabled();
     if (toggle && toggle.checked !== enabled) {
       toggle.checked = enabled;
+    }
+    if (compressToggle && compressToggle.checked !== isCompressVideoEnabled()) {
+      compressToggle.checked = isCompressVideoEnabled();
     }
     if (wmRow) {
       wmRow.style.display = enabled ? '' : 'none';
@@ -172,6 +176,7 @@
     card.className = 'm3-bypass-card';
 
     const isEnabled = isBypassUploadEnabled();
+    const isCompress = isCompressVideoEnabled();
     const currentWm = getBypassWatermark();
     const statusAtRender = getMethodStatus();
     const isWorking = statusAtRender === 'WORKING';
@@ -198,10 +203,26 @@
           <label class="m3-watermark-label" for="m3-watermark-input">Watermark</label>
           <input type="text" id="m3-watermark-input" class="m3-watermark-input" value="${escapeHtmlAttr(currentWm)}" placeholder="Method from @username" />
         </div>
+        <div class="m3-compress-section">
+          <div class="m3-bypass-header">
+            <div class="m3-bypass-title-row">
+              <label class="m3-switch" for="m3-compress-toggle" title="Compress video locally with FFmpeg WASM">
+                <input type="checkbox" id="m3-compress-toggle" ${isCompress ? 'checked' : ''} />
+                <span class="m3-slider"></span>
+              </label>
+              <span class="m3-bypass-title">Compress video ?</span>
+            </div>
+            <span class="m3-compress-pill">FFmpeg · veryfast</span>
+          </div>
+          <p class="m3-bypass-desc">
+            Shrinks file size with visually identical quality (H.264 CRF 20 · veryfast). Caches ~31 MB FFmpeg WASM on first use.
+          </p>
+        </div>
       </div>
     `;
 
     const toggle = card.querySelector('#m3-bypass-toggle');
+    const compressToggle = card.querySelector('#m3-compress-toggle');
     const wmRow = card.querySelector('#m3-watermark-row');
     const wmInput = card.querySelector('#m3-watermark-input');
 
@@ -210,6 +231,12 @@
       setBypassUploadEnabled(checked);
       if (wmRow) wmRow.style.display = checked ? '' : 'none';
     });
+
+    if (compressToggle) {
+      compressToggle.addEventListener('change', (e) => {
+        setCompressVideoEnabled(e.target.checked);
+      });
+    }
 
     if (wmInput) {
       wmInput.addEventListener('input', (e) => {
@@ -287,6 +314,101 @@
     }
   };
 
+  const uint8ToBase64 = (bytes) => {
+    let binary = '';
+    const step = 0x8000;
+    for (let i = 0; i < bytes.length; i += step) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+    }
+    return btoa(binary);
+  };
+
+  const base64ToUint8 = (b64) => {
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) {
+      bytes[i] = bin.charCodeAt(i);
+    }
+    return bytes;
+  };
+
+  const compressVideoViaOffscreen = async (file, onProgress = () => {}) => {
+    const ensureRes = await new Promise((resolve) => {
+      chrome.runtime.sendMessage({ type: 'ENSURE_OFFSCREEN' }, resolve);
+    });
+    if (!ensureRes?.ok) {
+      throw new Error(ensureRes?.error || 'Failed to start FFmpeg offscreen worker.');
+    }
+
+    const inputBytes = new Uint8Array(await file.arrayBuffer());
+    const CHUNK_SIZE = 2 * 1024 * 1024;
+    const totalChunks = Math.max(1, Math.ceil(inputBytes.byteLength / CHUNK_SIZE));
+
+    return new Promise((resolve, reject) => {
+      const port = chrome.runtime.connect({ name: 'fa-ffmpeg-compress' });
+      let outChunks = [];
+      let outTotalSize = 0;
+      let resultMeta = {};
+      let settled = false;
+
+      port.onDisconnect.addListener(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('FFmpeg offscreen connection closed unexpectedly.'));
+        }
+      });
+
+      port.onMessage.addListener((msg) => {
+        if (!msg) return;
+        if (msg.type === 'PROGRESS') {
+          onProgress(msg);
+          return;
+        }
+        if (msg.type === 'RESULT_INIT') {
+          outChunks = [];
+          outTotalSize = Number(msg.totalSize) || 0;
+          resultMeta = msg;
+          return;
+        }
+        if (msg.type === 'RESULT_CHUNK' && typeof msg.b64 === 'string') {
+          outChunks.push(base64ToUint8(msg.b64));
+          return;
+        }
+        if (msg.type === 'RESULT_DONE') {
+          settled = true;
+          try { port.disconnect(); } catch (_) {}
+          const merged = new Uint8Array(outTotalSize || outChunks.reduce((a, c) => a + c.byteLength, 0));
+          let off = 0;
+          for (const c of outChunks) {
+            merged.set(c, off);
+            off += c.byteLength;
+          }
+          const outName = file.name.replace(/\.[^.]+$/, '') + '.mp4';
+          const outFile = new File([merged], outName, { type: 'video/mp4', lastModified: Date.now() });
+          resolve({
+            file: outFile,
+            origSize: resultMeta.origSize || inputBytes.byteLength,
+            outSize: merged.byteLength,
+            skippedLarger: Boolean(resultMeta.skippedLarger)
+          });
+          return;
+        }
+        if (msg.type === 'ERROR') {
+          settled = true;
+          try { port.disconnect(); } catch (_) {}
+          reject(new Error(msg.error || 'FFmpeg compression failed.'));
+        }
+      });
+
+      port.postMessage({ type: 'INIT', fileName: file.name, totalSize: inputBytes.byteLength, totalChunks });
+      for (let i = 0; i < totalChunks; i++) {
+        const slice = inputBytes.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        port.postMessage({ type: 'CHUNK', index: i, b64: uint8ToBase64(slice) });
+      }
+      port.postMessage({ type: 'COMMIT' });
+    });
+  };
+
   const processAndCalibrateFile = async (file) => {
     if (_activePatching) return;
     _activePatching = true;
@@ -327,6 +449,7 @@
         <div class="fish-progress-fill" id="fish-progress-fill"></div>
         <div class="fish-progress-center">
           <span class="fish-progress-percent" id="fish-progress-percent">0%</span>
+          <span class="fish-progress-sub" id="fish-progress-sub"></span>
         </div>
       `;
       dropCard.appendChild(overlay);
@@ -334,11 +457,13 @@
 
     const fillEl = overlay.querySelector('#fish-progress-fill');
     const percentEl = overlay.querySelector('#fish-progress-percent');
+    const subEl = overlay.querySelector('#fish-progress-sub');
 
-    const setProgress = (val) => {
+    const setProgress = (val, subText = null) => {
       const clamped = Math.max(0, Math.min(100, Math.round(val)));
       if (fillEl) fillEl.style.setProperty('width', clamped + '%', 'important');
       if (percentEl) percentEl.textContent = clamped + '%';
+      if (subEl && subText !== null) subEl.textContent = subText;
     };
 
     const animateProgress = (from, to, duration) => {
@@ -368,19 +493,45 @@
     };
 
     try {
-      log('Calibrating video inside extension:', file.name);
-      setProgress(10);
+      const doCompress = isCompressVideoEnabled();
+      const doBypass = isBypassUploadEnabled();
+      let workingFile = file;
 
-      // Jalankan patching segera sambil progress bar berjalan mulus sampai 85%
-      const patchPromise = calibrateVideoFile(file);
-      await Promise.all([patchPromise, animateProgress(10, 85, 320)]);
-      const calibratedFile = await patchPromise;
+      if (doCompress) {
+        log('Compressing video via FFmpeg WASM:', file.name);
+        const maxCompressPct = doBypass ? 82 : 98;
+        setProgress(2, 'Preparing FFmpeg WASM...');
+        const compRes = await compressVideoViaOffscreen(workingFile, (prog) => {
+          if (prog.stage === 'wasm') {
+            const p = 2 + Math.round((prog.percent / 100) * 20);
+            setProgress(p, prog.detail || 'Downloading FFmpeg WASM...');
+          } else if (prog.stage === 'compress') {
+            const p = 22 + Math.round((prog.percent / 100) * (maxCompressPct - 22));
+            setProgress(p, prog.detail || 'Compressing (veryfast)...');
+          }
+        });
+        workingFile = compRes.file;
+        log(
+          compRes.skippedLarger
+            ? `✓ Compression skipped (already optimal ${(compRes.origSize / 1048576).toFixed(2)} MB)`
+            : `✓ Compressed ${(compRes.origSize / 1048576).toFixed(2)} MB -> ${(compRes.outSize / 1048576).toFixed(2)} MB`
+        );
+      }
 
-      await animateProgress(85, 100, 140);
+      if (doBypass) {
+        log('Calibrating video inside extension:', workingFile.name);
+        const startPct = doCompress ? 82 : 10;
+        setProgress(startPct, doCompress ? 'Calibrating 1:1 bypass...' : '');
+        const patchPromise = calibrateVideoFile(workingFile);
+        await Promise.all([patchPromise, animateProgress(startPct, 95, 280)]);
+        workingFile = await patchPromise;
+      }
+
+      await animateProgress(95, 100, 120);
       restoreDropzone();
 
-      // Handover hasil patch ke panel upload TikTok
-      handoverFileToUploadPanel(fileInput, calibratedFile);
+      // Handover hasil akhir ke panel upload TikTok
+      handoverFileToUploadPanel(fileInput, workingFile);
     } catch (err) {
       log('Calibration error:', err?.message || err);
       restoreDropzone();
@@ -399,17 +550,19 @@
 
   const DROPZONE_SELECTOR = '[data-e2e="select_video_container"], [data-e2e="select_video_button"], .upload-stage-btn';
 
+  const shouldInterceptUpload = () => isBypassUploadEnabled() || isCompressVideoEnabled();
+
   const setupFileUploadInterceptor = () => {
     ['pointerdown', 'mousedown'].forEach((evtName) => {
       document.addEventListener(evtName, (e) => {
-        if (!isBypassUploadEnabled()) return;
+        if (!shouldInterceptUpload()) return;
         if (!e.target.closest || !e.target.closest(DROPZONE_SELECTOR)) return;
         e.stopImmediatePropagation();
       }, true);
     });
 
     document.addEventListener('click', (e) => {
-      if (!isBypassUploadEnabled()) return;
+      if (!shouldInterceptUpload()) return;
       const dropzone = e.target.closest && e.target.closest(DROPZONE_SELECTOR);
       if (!dropzone) return;
       e.preventDefault();
@@ -420,13 +573,13 @@
     }, true);
 
     document.addEventListener('dragover', (e) => {
-      if (!isBypassUploadEnabled()) return;
+      if (!shouldInterceptUpload()) return;
       const dropzone = e.target.closest && e.target.closest('[data-e2e="select_video_container"], .upload, [class*="upload"]');
       if (dropzone) e.preventDefault();
     }, true);
 
     document.addEventListener('drop', (e) => {
-      if (!isBypassUploadEnabled()) return;
+      if (!shouldInterceptUpload()) return;
       const dropzone = e.target.closest && e.target.closest('[data-e2e="select_video_container"], .upload, [class*="upload"]');
       if (dropzone) {
         e.preventDefault();
@@ -440,7 +593,7 @@
     }, true);
 
     document.addEventListener('change', (e) => {
-      if (!isBypassUploadEnabled()) return;
+      if (!shouldInterceptUpload()) return;
       if (_isHandingOver) return;
       const target = e.target;
       if (target && target.tagName === 'INPUT' && target.type === 'file' && target.id !== 'fish-proxy-file-input') {

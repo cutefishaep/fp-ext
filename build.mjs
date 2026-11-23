@@ -292,7 +292,11 @@ function packZipAndCrx() {
     'popup.html',
     'popup.js',
     'updater.html',
-    'updater.js'
+    'updater.js',
+    'offscreen.html',
+    'offscreen.js',
+    'ffmpeg-worker.js',
+    'vendor/ffmpeg-core.js'
   ];
   const files = runtimeFiles.map((name) => {
     const fullPath = join(root, 'src', name);

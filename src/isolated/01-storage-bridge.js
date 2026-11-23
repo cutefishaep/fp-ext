@@ -2,15 +2,18 @@
   const DEFAULT_WATERMARK = 'Method from @cutefishaep';
   const STORAGE_KEYS = {
     enabled: 'fish_acc_bypass_upload',
-    watermark: 'fish_acc_bypass_watermark'
+    watermark: 'fish_acc_bypass_watermark',
+    compress: 'fish_acc_compress_video'
   };
 
   let _bypassEnabled = true;
   let _bypassWatermark = DEFAULT_WATERMARK;
+  let _compressEnabled = false;
   let _liveConfig = null;
 
   const isBypassUploadEnabled = () => _bypassEnabled;
   const getBypassWatermark = () => _bypassWatermark;
+  const isCompressVideoEnabled = () => _compressEnabled;
   const getLiveConfig = () => _liveConfig;
 
   const syncSettingsToPage = () => {
@@ -47,11 +50,21 @@
     syncSettingsToPage();
   };
 
+  const setCompressVideoEnabled = (enabled) => {
+    _compressEnabled = Boolean(enabled);
+    if (isExtensionAlive() && chrome.storage?.local) {
+      try { chrome.storage.local.set({ [STORAGE_KEYS.compress]: _compressEnabled }); } catch (_) {}
+    }
+  };
+
   const initSettings = async () => {
     try {
       if (isExtensionAlive() && chrome.storage?.local) {
-        const stored = await chrome.storage.local.get([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark, 'fa_live_core']);
+        const stored = await chrome.storage.local.get([STORAGE_KEYS.enabled, STORAGE_KEYS.watermark, STORAGE_KEYS.compress, 'fa_live_core']);
         _liveConfig = stored.fa_live_core?.config || null;
+        if (typeof stored[STORAGE_KEYS.compress] === 'boolean') {
+          _compressEnabled = stored[STORAGE_KEYS.compress];
+        }
         let needsPersist = false;
         const toPersist = {};
 

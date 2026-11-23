@@ -72,6 +72,8 @@
   position: absolute !important;
   inset: 0 !important;
   display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
   align-items: center !important;
   justify-content: center !important;
 }
@@ -83,6 +85,30 @@
   color: #ffffff !important;
   mix-blend-mode: difference !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace !important;
+}
+
+.fish-progress-sub {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #ffffff !important;
+  mix-blend-mode: difference !important;
+}
+
+.m3-compress-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  margin-top: 14px !important;
+  padding-top: 14px !important;
+}
+
+.m3-compress-pill {
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  color: #c4f7c8 !important;
+  background-color: rgba(27, 77, 36, 0.75) !important;
+  border: 1px solid rgba(163, 219, 167, 0.3) !important;
+  padding: 3px 10px !important;
+  border-radius: 9999px !important;
+  flex-shrink: 0 !important;
 }
 
 .m3-bypass-card:hover {

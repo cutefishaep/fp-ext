@@ -683,6 +683,25 @@ chrome.runtime.onConnect?.addListener((port) => {
   });
 });
 
+const ensureOffscreenDocument = async () => {
+  const offscreenUrl = chrome.runtime.getURL('offscreen.html');
+  if (typeof chrome.runtime.getContexts === 'function') {
+    const contexts = await chrome.runtime.getContexts({
+      contextTypes: ['OFFSCREEN_DOCUMENT'],
+      documentUrls: [offscreenUrl]
+    });
+    if (contexts.length > 0) return true;
+  } else if (chrome.offscreen?.hasDocument && (await chrome.offscreen.hasDocument())) {
+    return true;
+  }
+  await chrome.offscreen.createDocument({
+    url: 'offscreen.html',
+    reasons: ['WORKERS'],
+    justification: 'Run FFmpeg WASM video compression in a dedicated worker'
+  });
+  return true;
+};
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (!message || !message.type) return false;
 
@@ -706,6 +725,13 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
   if (message.type === 'GET_VERSIONS') {
     getVersions().then((v) => sendResponse(v));
+    return true;
+  }
+
+  if (message.type === 'ENSURE_OFFSCREEN') {
+    ensureOffscreenDocument()
+      .then(() => sendResponse({ ok: true }))
+      .catch((err) => sendResponse({ ok: false, error: err?.message || 'Offscreen error' }));
     return true;
   }
 
