@@ -800,18 +800,30 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
   let tikwmData = null;
 
   if (pageUrl && typeof pageUrl === 'string' && pageUrl.startsWith('https://www.tiktok.com/')) {
-    try {
-      const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}&hd=1`;
-      if (isAllowedUrl(apiUrl, ALLOWED_TIKWM_HOST_RE)) {
-        const twRes = await fetchWithTimeout(apiUrl, {}, 8000);
-        if (twRes.ok) {
-          const twJson = await twRes.json();
-          if (twJson && twJson.code === 0 && twJson.data) {
-            tikwmData = twJson.data;
+    const apiUrl = `https://www.tikwm.com/api/?url=${encodeURIComponent(pageUrl)}&hd=1`;
+    if (isAllowedUrl(apiUrl, ALLOWED_TIKWM_HOST_RE)) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const twRes = await fetchWithTimeout(apiUrl, {}, 12000);
+          if (twRes.ok) {
+            const twJson = await twRes.json();
+            if (twJson && twJson.code === 0 && twJson.data) {
+              tikwmData = twJson.data;
+              break;
+            }
+            if (twJson && twJson.code === -1 && attempt === 0) {
+              await new Promise((r) => setTimeout(r, 1150));
+              continue;
+            }
+          }
+          break;
+        } catch (_) {
+          if (attempt === 0) {
+            await new Promise((r) => setTimeout(r, 1150));
           }
         }
       }
-    } catch (_) {}
+    }
   }
 
   const rawCandidates = [
@@ -833,48 +845,23 @@ const handleProbeVideo = async ({ pageUrl, streamUrl }) => {
 
   for (const candUrl of candidates) {
     try {
-      const probeRes = await fetchWithTimeout(candUrl, {
-        headers: { 'Range': 'bytes=0-1048575' }
-      }, 8000);
-      const cr = probeRes.headers.get('content-range');
-      if (cr && cr.includes('/')) {
-        const parsed = parseInt(cr.split('/')[1], 10);
-        if (!isNaN(parsed) && parsed > 0) totalSizeBytes = parsed;
-      } else {
-        const cl = probeRes.headers.get('content-length');
-        if (cl && probeRes.status !== 206) {
-          const parsed = parseInt(cl, 10);
-          if (!isNaN(parsed) && parsed > 0) totalSizeBytes = parsed;
-        }
-      }
-
-      if (probeRes.ok || probeRes.status === 206) {
-        resolvedStreamUrl = candUrl;
-        const ab = await probeRes.arrayBuffer();
-        let meta = parseMp4MetadataFromBuffer(new Uint8Array(ab));
-        if (!meta || !meta.width || !meta.fps) {
-          try {
-            const tailRes = await fetchWithTimeout(candUrl, {
-              headers: { 'Range': 'bytes=-524288' }
-            }, 8000);
-            if (tailRes.ok || tailRes.status === 206) {
-              const tailAb = await tailRes.arrayBuffer();
-              const tailMeta = parseMp4MetadataFromBuffer(new Uint8Array(tailAb));
-              if (tailMeta && (tailMeta.width || tailMeta.fps)) {
-                meta = {
-                  fps: tailMeta.fps || meta?.fps || 0,
-                  width: tailMeta.width || meta?.width || 0,
-                  height: tailMeta.height || meta?.height || 0,
-                  comment: tailMeta.comment || meta?.comment || '',
-                  duration: tailMeta.duration || meta?.duration || 0
-                };
-              }
-            }
-          } catch (_) {}
-        }
-        atomMeta = meta;
-        if (atomMeta && atomMeta.width && atomMeta.fps) {
-          break;
+      const fpsApiUrl = `https://www.cutefish.my.id/api/tiktok-fps?url=${encodeURIComponent(candUrl)}`;
+      const probeRes = await fetchWithTimeout(fpsApiUrl, {}, 15000);
+      if (probeRes.ok) {
+        const meta = await probeRes.json();
+        if (meta && (meta.width || meta.fps || meta.size)) {
+          resolvedStreamUrl = candUrl;
+          if (meta.size > 0) totalSizeBytes = meta.size;
+          atomMeta = {
+            fps: meta.fps || 0,
+            width: meta.width || 0,
+            height: meta.height || 0,
+            comment: meta.comment || '',
+            duration: meta.duration || 0
+          };
+          if (atomMeta.width && atomMeta.fps) {
+            break;
+          }
         }
       }
     } catch (_) {}
