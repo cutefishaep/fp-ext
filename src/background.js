@@ -43,7 +43,7 @@ const getBundledCoreVersion = async () => {
   const loaderVersion = chrome.runtime.getManifest().version;
   if (_cachedBundledCoreVersion) return _cachedBundledCoreVersion;
   try {
-    const res = await fetch(chrome.runtime.getURL('core-version.json'), { cache: 'no-store' });
+    const res = await fetch(chrome.runtime.getURL('core-config.json'), { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
       if (data?.coreVersion) _cachedBundledCoreVersion = String(data.coreVersion);

@@ -259,18 +259,15 @@ function createCrx3(zipBuffer) {
 
 function packCoreZip({ contentJs, isolatedJs, contentCss }) {
   const loaderManifest = JSON.parse(readTextLf(join(root, 'loader/manifest.json')));
-  const coreMeta = existsSync(join(root, 'src/core-version.json'))
-    ? JSON.parse(readTextLf(join(root, 'src/core-version.json')))
+  const rawCoreConfig = existsSync(join(root, 'src/core-config.json'))
+    ? JSON.parse(readTextLf(join(root, 'src/core-config.json')))
     : {};
   const loaderVersion = loaderManifest.version;
-  const coreVersion = coreMeta.coreVersion || loaderVersion;
+  const coreVersion = rawCoreConfig.coreVersion || loaderVersion;
 
   const outDir = join(root, 'build');
   mkdirSync(outDir, { recursive: true });
 
-  const rawCoreConfig = existsSync(join(root, 'src/core-config.json'))
-    ? JSON.parse(readTextLf(join(root, 'src/core-config.json')))
-    : {};
   const mergedCoreConfig = {
     ...rawCoreConfig,
     coreVersion,
@@ -282,8 +279,7 @@ function packCoreZip({ contentJs, isolatedJs, contentCss }) {
     { name: 'content.js', data: Buffer.from(contentJs, 'utf8') },
     { name: 'isolated.js', data: Buffer.from(isolatedJs, 'utf8') },
     { name: 'content.css', data: Buffer.from(contentCss, 'utf8') },
-    { name: 'core-config.json', data: Buffer.from(JSON.stringify(mergedCoreConfig, null, 2) + '\n', 'utf8') },
-    { name: 'core-version.json', data: Buffer.from(readTextLf(join(root, 'src/core-version.json')), 'utf8') }
+    { name: 'core-config.json', data: Buffer.from(JSON.stringify(mergedCoreConfig, null, 2) + '\n', 'utf8') }
   ];
 
   const sha256Hex = (buf) => createHash('sha256').update(buf).digest('hex');

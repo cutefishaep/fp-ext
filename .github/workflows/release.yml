@@ -37,13 +37,12 @@ jobs:
 
           node -e "
             const fs = require('fs');
-            for (const p of ['src/core-version.json', 'src/core-config.json']) {
-              const c = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
-              if (c.coreVersion !== '${VERSION}') {
-                c.coreVersion = '${VERSION}';
-                fs.writeFileSync(p, JSON.stringify(c, null, 2) + '\n', 'utf8');
-                console.log('Synced ' + p + ' -> ${VERSION}');
-              }
+            const p = 'src/core-config.json';
+            const c = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, 'utf8')) : {};
+            if (c.coreVersion !== '${VERSION}') {
+              c.coreVersion = '${VERSION}';
+              fs.writeFileSync(p, JSON.stringify(c, null, 2) + '\n', 'utf8');
+              console.log('Synced ' + p + ' -> ${VERSION}');
             }
           "
 
