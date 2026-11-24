@@ -261,6 +261,10 @@
   mix-blend-mode: difference !important;
 }
 
+.m3-hidden {
+  display: none !important;
+}
+
 .m3-compress-section {
   border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
   margin-top: 14px !important;
@@ -277,7 +281,7 @@
   justify-content: space-between !important;
   align-items: center !important;
   gap: 16px !important;
-  margin-bottom: 10px !important;
+  margin-bottom: 0 !important;
 }
 
 .m3-bypass-title-row {

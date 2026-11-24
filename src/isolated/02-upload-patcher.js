@@ -66,30 +66,44 @@
 
   const syncCardControlsFromState = () => {
     const toggle = document.getElementById('m3-bypass-toggle');
+    const compressToggle = document.getElementById('m3-compress-toggle');
+    const compressSection = document.getElementById('m3-compress-section');
+    const compressRow = document.getElementById('m3-compress-row');
     const compressSwitch = document.getElementById('m3-compress-switch');
     const wmRow = document.getElementById('m3-watermark-row');
     const wmInput = document.getElementById('m3-watermark-input');
     const methodRow = document.getElementById('m3-method-row');
     const methodSwitch = document.getElementById('m3-method-switch');
     const enabled = isBypassUploadEnabled();
+    const compEnabled = typeof isCompressVideoEnabled === 'function' ? isCompressVideoEnabled() : true;
+    const activePreset = typeof getActiveCompressPreset === 'function' ? getActiveCompressPreset() : '1080p';
+    const mObj = getSelectedMethodObj();
+    const hideCompressSection = enabled && mObj && mObj.supportsCompress === false;
+
     if (toggle && toggle.checked !== enabled) {
       toggle.checked = enabled;
     }
+    if (methodRow) {
+      methodRow.classList.toggle('m3-hidden', !enabled);
+    }
+    if (wmRow) {
+      wmRow.classList.toggle('m3-hidden', !enabled);
+    }
+    if (compressSection) {
+      compressSection.classList.toggle('m3-hidden', Boolean(hideCompressSection));
+    }
+    if (compressToggle && compressToggle.checked !== compEnabled) {
+      compressToggle.checked = compEnabled;
+    }
+    if (compressRow) {
+      compressRow.classList.toggle('m3-hidden', !compEnabled);
+    }
     if (compressSwitch) {
-      const curComp = typeof getCompressMode === 'function' ? getCompressMode() : '1080p';
       compressSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
-        const active = btn.dataset.compressMode === curComp;
+        const active = btn.dataset.compressMode === activePreset;
         btn.classList.toggle('is-active', active);
         btn.setAttribute('aria-checked', active ? 'true' : 'false');
       });
-    }
-    const compressField = document.getElementById('m3-compress-field');
-    if (compressField) {
-      const mObj = getSelectedMethodObj();
-      compressField.style.display = (mObj && mObj.supportsCompress === false) ? 'none' : '';
-    }
-    if (methodRow) {
-      methodRow.style.display = enabled ? '' : 'none';
     }
     if (methodSwitch) {
       const cur = getSelectedMethodId();
@@ -98,9 +112,6 @@
         btn.classList.toggle('is-active', active);
         btn.setAttribute('aria-checked', active ? 'true' : 'false');
       });
-    }
-    if (wmRow) {
-      wmRow.style.display = enabled ? '' : 'none';
     }
     if (wmInput && document.activeElement !== wmInput && wmInput.value !== getBypassWatermark()) {
       wmInput.value = getBypassWatermark();
@@ -357,7 +368,8 @@
     card.className = 'm3-bypass-card';
 
     const isEnabled = isBypassUploadEnabled();
-    const curCompressMode = typeof getCompressMode === 'function' ? getCompressMode() : '1080p';
+    const compEnabled = typeof isCompressVideoEnabled === 'function' ? isCompressVideoEnabled() : true;
+    const activePreset = typeof getActiveCompressPreset === 'function' ? getActiveCompressPreset() : '1080p';
     const currentWm = getBypassWatermark();
     const statusAtRender = getMethodStatus();
     const isWorking = statusAtRender === 'WORKING';
@@ -377,7 +389,7 @@
             <span class="m3-status-text">${escapeHtmlAttr(statusAtRender)}</span>
           </div>
         </div>
-        <div class="m3-field" id="m3-method-row" style="${isEnabled ? '' : 'display: none;'}">
+        <div class="m3-field ${isEnabled ? '' : 'm3-hidden'}" id="m3-method-row">
           <span class="m3-field-label">Method</span>
           <div class="m3-method-switch" id="m3-method-switch" role="radiogroup" aria-label="Method">
             ${_webMethodsState.methods.map((m) => {
@@ -386,27 +398,35 @@
             }).join('')}
           </div>
         </div>
-        <div class="m3-field" id="m3-compress-field">
-          <span class="m3-field-label">Compression</span>
-          <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compression">
-            <button type="button" class="m3-method-pill ${curCompressMode === 'off' ? 'is-active' : ''}" data-compress-mode="off" id="m3-compress-off-btn" role="radio" aria-checked="${curCompressMode === 'off' ? 'true' : 'false'}">OFF</button>
-            <button type="button" class="m3-method-pill ${curCompressMode === '720p' ? 'is-active' : ''}" data-compress-mode="720p" role="radio" aria-checked="${curCompressMode === '720p' ? 'true' : 'false'}">720P</button>
-            <button type="button" class="m3-method-pill ${curCompressMode === '1080p' ? 'is-active' : ''}" data-compress-mode="1080p" role="radio" aria-checked="${curCompressMode === '1080p' ? 'true' : 'false'}">1080P</button>
-          </div>
-          <p class="m3-compress-limit-note" id="m3-compress-limit-note" style="display: none;"></p>
-        </div>
-        <div class="m3-field" id="m3-watermark-row" style="${isEnabled ? '' : 'display: none;'}">
+        <div class="m3-field ${isEnabled ? '' : 'm3-hidden'}" id="m3-watermark-row">
           <label class="m3-field-label" for="m3-watermark-input">Watermark</label>
           <input type="text" id="m3-watermark-input" class="m3-watermark-input" value="${escapeHtmlAttr(currentWm)}" placeholder="Method from @username" />
+        </div>
+        <div class="m3-compress-section" id="m3-compress-section">
+          <div class="m3-bypass-header">
+            <div class="m3-bypass-title-row">
+              <label class="m3-switch" for="m3-compress-toggle" title="Toggle Compression">
+                <input type="checkbox" id="m3-compress-toggle" ${compEnabled ? 'checked' : ''} />
+                <span class="m3-slider"></span>
+              </label>
+              <span class="m3-bypass-title">Compression</span>
+            </div>
+          </div>
+          <div class="m3-field ${compEnabled ? '' : 'm3-hidden'}" id="m3-compress-row">
+            <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compression">
+              <button type="button" class="m3-method-pill ${activePreset === '720p' ? 'is-active' : ''}" data-compress-mode="720p" role="radio" aria-checked="${activePreset === '720p' ? 'true' : 'false'}">720P</button>
+              <button type="button" class="m3-method-pill ${activePreset === '1080p' ? 'is-active' : ''}" data-compress-mode="1080p" role="radio" aria-checked="${activePreset === '1080p' ? 'true' : 'false'}">1080P</button>
+            </div>
+            <p class="m3-compress-limit-note m3-hidden" id="m3-compress-limit-note"></p>
+          </div>
         </div>
       </div>
     `;
 
     const toggle = card.querySelector('#m3-bypass-toggle');
+    const compressToggle = card.querySelector('#m3-compress-toggle');
     const compressSwitch = card.querySelector('#m3-compress-switch');
-    const methodRow = card.querySelector('#m3-method-row');
     const methodSwitch = card.querySelector('#m3-method-switch');
-    const wmRow = card.querySelector('#m3-watermark-row');
     const wmInput = card.querySelector('#m3-watermark-input');
 
     const bindMethodPills = (container) => {
@@ -429,11 +449,20 @@
     };
 
     toggle.addEventListener('change', (e) => {
-      const checked = e.target.checked;
-      setBypassUploadEnabled(checked);
-      if (methodRow) methodRow.style.display = checked ? '' : 'none';
-      if (wmRow) wmRow.style.display = checked ? '' : 'none';
+      setBypassUploadEnabled(e.target.checked);
+      syncCardControlsFromState();
     });
+
+    if (compressToggle) {
+      compressToggle.addEventListener('change', (e) => {
+        if (_compressLocked) {
+          e.target.checked = true;
+          return;
+        }
+        if (typeof setCompressVideoEnabled === 'function') setCompressVideoEnabled(e.target.checked);
+        syncCardControlsFromState();
+      });
+    }
 
     bindMethodPills(methodSwitch);
 
@@ -442,13 +471,8 @@
       container.querySelectorAll('.m3-method-pill').forEach((btn) => {
         btn.addEventListener('click', () => {
           const mode = btn.dataset.compressMode || _webMethodsState.defaultCompressMode || '1080p';
-          if (_compressLocked && mode === 'off') return;
           if (typeof setCompressMode === 'function') setCompressMode(mode);
-          container.querySelectorAll('.m3-method-pill').forEach((other) => {
-            const active = other.dataset.compressMode === mode;
-            other.classList.toggle('is-active', active);
-            other.setAttribute('aria-checked', active ? 'true' : 'false');
-          });
+          syncCardControlsFromState();
         });
       });
     };
@@ -466,12 +490,12 @@
         bindMethodPills(sw);
       }
       const cSw = document.getElementById('m3-compress-switch');
-      if (cSw && Array.isArray(data.compressModes) && data.compressModes.length) {
-        const curComp = typeof getCompressMode === 'function' ? getCompressMode() : (_webMethodsState.defaultCompressMode || '1080p');
-        cSw.innerHTML = data.compressModes.map((cm) => {
-          const active = cm.id === curComp;
-          const extraId = cm.id === 'off' ? ' id="m3-compress-off-btn"' : '';
-          return `<button type="button" class="m3-method-pill ${active ? 'is-active' : ''}" data-compress-mode="${escapeHtmlAttr(cm.id)}"${extraId} role="radio" aria-checked="${active ? 'true' : 'false'}">${escapeHtmlAttr(cm.label || cm.id)}</button>`;
+      const modes = Array.isArray(data.compressModes) ? data.compressModes.filter((cm) => cm.id !== 'off') : [];
+      if (cSw && modes.length) {
+        const curPreset = typeof getActiveCompressPreset === 'function' ? getActiveCompressPreset() : (_webMethodsState.defaultCompressMode || '1080p');
+        cSw.innerHTML = modes.map((cm) => {
+          const active = cm.id === curPreset;
+          return `<button type="button" class="m3-method-pill ${active ? 'is-active' : ''}" data-compress-mode="${escapeHtmlAttr(cm.id)}" role="radio" aria-checked="${active ? 'true' : 'false'}">${escapeHtmlAttr(cm.label || cm.id)}</button>`;
         }).join('');
         bindCompressPills(cSw);
       }
@@ -519,30 +543,27 @@
 
   const setCompressLimitLock = (locked, reasonText = '') => {
     _compressLocked = Boolean(locked);
-    const compressSwitch = document.getElementById('m3-compress-switch');
-    const offBtn = document.getElementById('m3-compress-off-btn');
+    const compressToggle = document.getElementById('m3-compress-toggle');
+    const compressLabel = compressToggle ? compressToggle.closest('.m3-switch') : null;
     const noteEl = document.getElementById('m3-compress-limit-note');
 
-    if (offBtn) {
-      offBtn.disabled = _compressLocked;
+    if (compressToggle) {
+      compressToggle.disabled = _compressLocked;
     }
-    if (_compressLocked && typeof getCompressMode === 'function' && getCompressMode() === 'off') {
-      if (typeof setCompressMode === 'function') setCompressMode('1080p');
-      if (compressSwitch) {
-        compressSwitch.querySelectorAll('.m3-method-pill').forEach((btn) => {
-          const active = btn.dataset.compressMode === '1080p';
-          btn.classList.toggle('is-active', active);
-          btn.setAttribute('aria-checked', active ? 'true' : 'false');
-        });
-      }
+    if (compressLabel) {
+      compressLabel.classList.toggle('is-locked', _compressLocked);
+    }
+    if (_compressLocked && typeof isCompressVideoEnabled === 'function' && !isCompressVideoEnabled()) {
+      if (typeof setCompressVideoEnabled === 'function') setCompressVideoEnabled(true);
+      syncCardControlsFromState();
     }
     if (noteEl) {
       if (_compressLocked && reasonText) {
         noteEl.textContent = reasonText;
-        noteEl.style.display = '';
+        noteEl.classList.remove('m3-hidden');
       } else {
         noteEl.textContent = '';
-        noteEl.style.display = 'none';
+        noteEl.classList.add('m3-hidden');
       }
     }
   };

@@ -9,11 +9,13 @@
   let _bypassEnabled = true;
   let _bypassWatermark = DEFAULT_WATERMARK;
   let _compressMode = '1080p';
+  let _lastCompressPreset = '1080p';
   let _liveConfig = null;
 
   const isBypassUploadEnabled = () => _bypassEnabled;
   const getBypassWatermark = () => _bypassWatermark;
   const getCompressMode = () => _compressMode;
+  const getActiveCompressPreset = () => (_compressMode !== 'off' ? _compressMode : _lastCompressPreset);
   const isCompressVideoEnabled = () => _compressMode !== 'off';
   const getLiveConfig = () => _liveConfig;
 
@@ -89,13 +91,17 @@
   const setCompressMode = (mode) => {
     const clean = String(mode || 'off').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'off';
     _compressMode = clean;
+    if (clean !== 'off') {
+      _lastCompressPreset = clean;
+      try { window.localStorage.setItem('fish_acc_compress_preset', clean); } catch (_) {}
+    }
     if (isExtensionAlive()) {
       coreStorageSet({ [STORAGE_KEYS.compress]: clean });
     }
   };
 
   const setCompressVideoEnabled = (enabled) => {
-    setCompressMode(enabled ? (_compressMode === 'off' ? '1080p' : _compressMode) : 'off');
+    setCompressMode(enabled ? (_lastCompressPreset || '1080p') : 'off');
   };
 
   const initSettings = async () => {
@@ -108,6 +114,11 @@
         } else if (typeof stored[STORAGE_KEYS.compress] === 'boolean') {
           _compressMode = stored[STORAGE_KEYS.compress] ? '1080p' : 'off';
         }
+        try {
+          const savedPreset = window.localStorage.getItem('fish_acc_compress_preset');
+          if (savedPreset && savedPreset !== 'off') _lastCompressPreset = savedPreset;
+        } catch (_) {}
+        if (_compressMode !== 'off') _lastCompressPreset = _compressMode;
         let needsPersist = false;
         const toPersist = {};
 
