@@ -2,6 +2,7 @@
 build/
 .backup/
 src/_metadata/
+loader/_metadata/
 *.pem
 
 # OS / Editor / Dependencies
