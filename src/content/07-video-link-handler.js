@@ -213,30 +213,6 @@
       return null;
     };
 
-    const isUndetectedMethodStr = (str) => {
-      if (!str || typeof str !== 'string') return true;
-      let s = str.trim();
-      if (!s || s === '—' || s === '-' || s.toLowerCase() === 'unknown' || s.toLowerCase() === 'undetected') return true;
-      if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
-        s = s.slice(1, -1).trim();
-      }
-      if (!s) return true;
-      // Filter out internal MP4 atom names & technical box tags
-      if (/^(data|stsd|avc1|mp4v|hdlr|meta|mdia|moov|trak|udta|ilst|desc|cmt|vide|soun)$/i.test(s)) return true;
-      if (s.startsWith('{') && s.endsWith('}')) return true;
-      try {
-        if (s.startsWith('{')) { JSON.parse(s); return true; }
-      } catch (_) {}
-      if (/^(lavf|lavc|ffmpeg|handbrake|libav|x264|x265)/i.test(s)) return true;
-      if (/^vid:[a-zA-Z0-9_-]+/i.test(s)) return true;
-      if (/^v\d{4,}[a-zA-Z0-9_-]{8,}/i.test(s)) return true;
-      if (/^(item_id|video_id|tos_id|aweme_id|music_id|author_id):/i.test(s)) return true;
-      if (/^(isom|mp42|dash|iso2|qt|avc1|mp41)$/i.test(s)) return true;
-      if (/^\d+$/.test(s)) return true;
-      if (!/[a-zA-Z]/.test(s)) return true;
-      return false;
-    };
-
     const cleanMethodTag = (comment) => {
       if (!comment || typeof comment !== 'string') return 'Undetected';
       const s = comment.trim().replace(/^["']|["']$/g, '').trim();
