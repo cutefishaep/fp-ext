@@ -289,7 +289,7 @@
   };
 
   const removeUploadBypassCard = () => {
-    ['m3-bypass-upload-card', 'm3-bypass-credit', 'm3-upload-top-bar', 'm3-upload-page-back-btn'].forEach((id) => {
+    ['m3-bypass-upload-card', 'm3-compress-section', 'm3-bypass-credit', 'm3-upload-top-bar', 'm3-upload-page-back-btn'].forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.remove();
     });
@@ -402,30 +402,36 @@
           <label class="m3-field-label" for="m3-watermark-input">Watermark</label>
           <input type="text" id="m3-watermark-input" class="m3-watermark-input" value="${escapeHtmlAttr(currentWm)}" placeholder="Method from @username" />
         </div>
-        <div class="m3-compress-section" id="m3-compress-section">
-          <div class="m3-bypass-header">
-            <div class="m3-bypass-title-row">
-              <label class="m3-switch" for="m3-compress-toggle" title="Toggle Compression">
-                <input type="checkbox" id="m3-compress-toggle" ${compEnabled ? 'checked' : ''} />
-                <span class="m3-slider"></span>
-              </label>
-              <span class="m3-bypass-title">Compression</span>
-            </div>
+      </div>
+    `;
+
+    const compressCard = document.createElement('div');
+    compressCard.id = 'm3-compress-section';
+    compressCard.className = 'm3-bypass-card m3-compress-card';
+    compressCard.innerHTML = `
+      <div class="m3-card-real-content">
+        <div class="m3-bypass-header">
+          <div class="m3-bypass-title-row">
+            <label class="m3-switch" for="m3-compress-toggle" title="Toggle Compression">
+              <input type="checkbox" id="m3-compress-toggle" ${compEnabled ? 'checked' : ''} />
+              <span class="m3-slider"></span>
+            </label>
+            <span class="m3-bypass-title">Compression</span>
           </div>
-          <div class="m3-field ${compEnabled ? '' : 'm3-hidden'}" id="m3-compress-row">
-            <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compression">
-              <button type="button" class="m3-method-pill ${activePreset === '720p' ? 'is-active' : ''}" data-compress-mode="720p" role="radio" aria-checked="${activePreset === '720p' ? 'true' : 'false'}">720P</button>
-              <button type="button" class="m3-method-pill ${activePreset === '1080p' ? 'is-active' : ''}" data-compress-mode="1080p" role="radio" aria-checked="${activePreset === '1080p' ? 'true' : 'false'}">1080P</button>
-            </div>
-            <p class="m3-compress-limit-note m3-hidden" id="m3-compress-limit-note"></p>
+        </div>
+        <div class="m3-field ${compEnabled ? '' : 'm3-hidden'}" id="m3-compress-row">
+          <div class="m3-method-switch" id="m3-compress-switch" role="radiogroup" aria-label="Compression">
+            <button type="button" class="m3-method-pill ${activePreset === '720p' ? 'is-active' : ''}" data-compress-mode="720p" role="radio" aria-checked="${activePreset === '720p' ? 'true' : 'false'}">720P</button>
+            <button type="button" class="m3-method-pill ${activePreset === '1080p' ? 'is-active' : ''}" data-compress-mode="1080p" role="radio" aria-checked="${activePreset === '1080p' ? 'true' : 'false'}">1080P</button>
           </div>
+          <p class="m3-compress-limit-note m3-hidden" id="m3-compress-limit-note"></p>
         </div>
       </div>
     `;
 
     const toggle = card.querySelector('#m3-bypass-toggle');
-    const compressToggle = card.querySelector('#m3-compress-toggle');
-    const compressSwitch = card.querySelector('#m3-compress-switch');
+    const compressToggle = compressCard.querySelector('#m3-compress-toggle');
+    const compressSwitch = compressCard.querySelector('#m3-compress-switch');
     const methodSwitch = card.querySelector('#m3-method-switch');
     const wmInput = card.querySelector('#m3-watermark-input');
 
@@ -524,6 +530,8 @@
       } catch (_) {}
     }
 
+    card.after(compressCard);
+
     let credit = document.getElementById('m3-bypass-credit');
     if (!credit) {
       credit = document.createElement('div');
@@ -531,7 +539,8 @@
       credit.className = 'm3-bypass-credit';
       credit.innerHTML = 'Thanks for <a href="https://www.tiktok.com/@itsmefachry" target="_blank" rel="noopener noreferrer">fachry</a> to help this method alive!';
     }
-    card.after(credit);
+    compressCard.after(credit);
+    syncCardControlsFromState();
 
     log('Bypass Upload Card mounted (local extension mode)');
   };
