@@ -297,20 +297,17 @@
       streamUrl: msg.streamUrl || null
     };
 
-    probeVideoDirect(req, emitStage)
-      .then(async (direct) => {
-        if (direct && (direct.tikwmData || (direct.atomMeta && direct.atomMeta.width))) {
-          reply(direct);
-          return;
+    const runProbe = async () => {
+      if (isExtensionAlive()) {
+        const bg = await sendBgMessage({ type: 'PROBE_VIDEO', ...req });
+        if (bg && (bg.tikwmData || bg.atomMeta)) {
+          return bg;
         }
-        if (isExtensionAlive()) {
-          const bg = await sendBgMessage({ type: 'PROBE_VIDEO', ...req });
-          if (bg && (bg.tikwmData || (bg.atomMeta && bg.atomMeta.width))) {
-            reply(bg);
-            return;
-          }
-        }
-        reply(direct || null);
-      })
+      }
+      return await probeVideoDirect(req, emitStage);
+    };
+
+    runProbe()
+      .then((res) => reply(res || null))
       .catch(() => reply(null));
   });

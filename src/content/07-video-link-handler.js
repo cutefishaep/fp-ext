@@ -445,7 +445,7 @@
         const mediaAuthorEl = overlay.querySelector('#fish-qm-media-author');
         const mediaHandleEl = overlay.querySelector('#fish-qm-media-handle');
         const mediaCaptionEl = overlay.querySelector('#fish-qm-media-caption');
-        if (mediaCoverEl && twData?.cover) {
+        if (mediaCoverEl && !initialCover && twData?.cover) {
           mediaCoverEl.src = twData.cover;
           mediaCoverEl.style.display = 'block';
         }
@@ -573,7 +573,7 @@
       const mediaAuthorEl = overlay.querySelector('#fish-qm-media-author');
       const mediaHandleEl = overlay.querySelector('#fish-qm-media-handle');
       const mediaCaptionEl = overlay.querySelector('#fish-qm-media-caption');
-      if (mediaCoverEl && tikwmData?.cover) {
+      if (mediaCoverEl && !initialCover && tikwmData?.cover) {
         mediaCoverEl.src = tikwmData.cover;
         mediaCoverEl.style.display = 'block';
       }
