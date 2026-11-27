@@ -298,13 +298,26 @@
     };
 
     const runProbe = async () => {
+      let bg = null;
       if (isExtensionAlive()) {
-        const bg = await sendBgMessage({ type: 'PROBE_VIDEO', ...req });
-        if (bg && (bg.tikwmData || bg.atomMeta)) {
+        bg = await sendBgMessage({ type: 'PROBE_VIDEO', ...req });
+        if (bg && bg.atomMeta && (bg.atomMeta.width || bg.atomMeta.fps)) {
           return bg;
         }
       }
-      return await probeVideoDirect(req, emitStage);
+      const direct = await probeVideoDirect({
+        pageUrl: req.pageUrl,
+        streamUrl: bg?.streamUrl || req.streamUrl
+      }, emitStage);
+      if (direct && (direct.atomMeta || direct.tikwmData)) {
+        return {
+          tikwmData: direct.tikwmData || bg?.tikwmData || null,
+          streamUrl: direct.streamUrl || bg?.streamUrl || null,
+          totalSizeBytes: direct.totalSizeBytes || bg?.totalSizeBytes || 0,
+          atomMeta: direct.atomMeta || bg?.atomMeta || null
+        };
+      }
+      return bg || direct || null;
     };
 
     runProbe()

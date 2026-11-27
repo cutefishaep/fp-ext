@@ -309,7 +309,7 @@
           </div>
 
           <div class="fish-qm-media-card" id="fish-qm-media-card" style="display:none;">
-            <img class="fish-qm-media-thumb" id="fish-qm-media-cover" alt="Cover video" ${initialCover ? `src="${escapeHTML(initialCover)}"` : 'style="display:none;"'}>
+            <img class="fish-qm-media-thumb" id="fish-qm-media-cover" alt="Cover video" crossorigin="anonymous" ${initialCover ? `src="${escapeHTML(initialCover)}"` : 'style="display:none;"'}>
             <div class="fish-qm-media-body">
               <div class="fish-qm-media-title" id="fish-qm-media-author">${escapeHTML(initialNickname)}</div>
               <div class="fish-qm-media-sub" id="fish-qm-media-handle">${escapeHTML(initialHandle)}</div>
