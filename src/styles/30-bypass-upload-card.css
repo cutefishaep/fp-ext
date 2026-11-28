@@ -229,7 +229,27 @@
   height: 100% !important;
   width: 0%;
   background: #a3dba7 !important;
-  transition: width 0.1s linear !important;
+  overflow: hidden !important;
+  transition: width 0.18s linear !important;
+}
+
+.fish-progress-fill::after {
+  content: '' !important;
+  position: absolute !important;
+  inset: 0 !important;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.24) 50%,
+    transparent 100%
+  ) !important;
+  transform: translateX(-100%) !important;
+  animation: fishProgressShimmer 1.8s ease-in-out infinite !important;
+}
+
+@keyframes fishProgressShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
 /* Teks persen di tengah — mix-blend-mode difference membuat warna teks
@@ -251,6 +271,7 @@
   line-height: 1 !important;
   color: #ffffff !important;
   mix-blend-mode: difference !important;
+  font-variant-numeric: tabular-nums !important;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace !important;
 }
 
@@ -259,6 +280,7 @@
   font-weight: 600 !important;
   color: #ffffff !important;
   mix-blend-mode: difference !important;
+  font-variant-numeric: tabular-nums !important;
 }
 
 .m3-compress-card {

@@ -12,7 +12,13 @@
       const msg = event.data;
       if (!msg || msg.source !== 'fish-acc-isolated' || msg.reqId !== reqId) return;
       if (msg.type === 'FISH_FFMPEG_PROGRESS') {
-        if (typeof onProgress === 'function') onProgress(msg.percent || 0);
+        if (typeof onProgress === 'function') {
+          onProgress({
+            stage: msg.stage || 'ffmpeg',
+            percent: Number(msg.percent) || 0,
+            detail: msg.detail || ''
+          });
+        }
         return;
       }
       if (msg.type === 'FISH_FFMPEG_EXEC_RESULT') {
@@ -37,7 +43,7 @@
     }, window.location.origin, [ab]);
   });
 
-  const createBridgeFFmpeg = () => {
+  const createBridgeFFmpeg = (emitPipelineProgress = null, pipelineState = null) => {
     const fsMap = new Map();
     const listeners = { progress: [], log: [] };
     return {
@@ -61,11 +67,98 @@
           }
         }
         if (!inputBytes) throw new Error('No input file written for FFmpeg.');
-        const outU8 = await execFFmpegViaIsolated(inputName, inputBytes, args, outputName, (pct) => {
-          listeners.progress.forEach((fn) => {
-            try { fn({ progress: (Number(pct) || 0) / 100 }); } catch (_) {}
+
+        const hasProgressListener = listeners.progress.length > 0;
+        const anchorPct = Math.max(0, Math.min(94, Number(pipelineState?.pct) || 78));
+        const ceilingPct = (anchorPct >= 75 && anchorPct < 90)
+          ? 89
+          : (anchorPct < 75 ? Math.min(89, anchorPct + 12) : 94);
+        const baseLabel = String(pipelineState?.status || 'Normalizing MP4 stream')
+          .replace(/\s*\([^)]*\)\s*$/, '')
+          .replace(/\.+$/, '')
+          .trim() || 'Normalizing MP4 stream';
+
+        const execStartedAt = Date.now();
+        let lastStage = 'init';
+        let lastFfPct = 0;
+        let lastEmitAt = 0;
+
+        const emitFallback = (pct, status) => {
+          if (typeof emitPipelineProgress !== 'function') return;
+          lastEmitAt = Date.now();
+          emitPipelineProgress(pct, status, true);
+        };
+
+        const heartbeatTimer = window.setInterval(() => {
+          if (hasProgressListener) return;
+          if (lastStage === 'wasm' || lastStage === 'finalize') return;
+          const sec = Math.floor((Date.now() - execStartedAt) / 1000);
+          if (sec < 2 || Date.now() - lastEmitAt < 900) return;
+
+          const maxCreep = Math.max(anchorPct, ceilingPct - 2);
+          const span = Math.max(1, (ceilingPct - 1) - anchorPct);
+          const pct = lastFfPct > 0
+            ? Math.min(ceilingPct - 1, anchorPct + Math.round((lastFfPct / 100) * span))
+            : Math.min(maxCreep, anchorPct + Math.floor(sec / 2));
+          const status = lastFfPct > 0
+            ? `${baseLabel} (${lastFfPct}% • ${sec}s)`
+            : `${baseLabel}... (${sec}s)`;
+          emitFallback(pct, status);
+        }, 1000);
+
+        let outU8;
+        try {
+          outU8 = await execFFmpegViaIsolated(inputName, inputBytes, args, outputName, (prog) => {
+            const stage = prog?.stage || 'ffmpeg';
+            const pct = Math.max(0, Math.min(100, Number(prog?.percent) || 0));
+            const detail = String(prog?.detail || '').trim();
+            lastStage = stage;
+
+            if (stage === 'wasm') {
+              const lower = detail.toLowerCase();
+              const wasmLabel = lower.includes('verif')
+                ? 'Verifying FFmpeg engine...'
+                : (detail && !lower.startsWith('downloading')
+                  ? `Downloading FFmpeg (${detail})...`
+                  : 'Downloading FFmpeg engine...');
+              emitFallback(null, wasmLabel);
+              return;
+            }
+
+            if (stage === 'upload' || stage === 'init') {
+              if (!hasProgressListener) {
+                emitFallback(anchorPct, detail || `${baseLabel}...`);
+              } else if (stage === 'upload' && detail) {
+                emitFallback(null, detail);
+              }
+              return;
+            }
+
+            if (stage === 'finalize') {
+              emitFallback(hasProgressListener ? null : ceilingPct, detail || 'Finalizing MP4 output...');
+              return;
+            }
+
+            // stage === 'ffmpeg'
+            lastFfPct = pct;
+            if (hasProgressListener) {
+              listeners.progress.forEach((fn) => {
+                try { fn({ progress: pct / 100 }); } catch (_) {}
+              });
+            } else {
+              const span = Math.max(1, (ceilingPct - 1) - anchorPct);
+              const mappedPct = Math.min(ceilingPct - 1, anchorPct + Math.round((pct / 100) * span));
+              const sec = Math.floor((Date.now() - execStartedAt) / 1000);
+              const status = pct > 0
+                ? (sec >= 2 ? `${baseLabel} (${pct}% • ${sec}s)` : `${baseLabel} (${pct}%)`)
+                : (sec >= 2 ? `${baseLabel}... (${sec}s)` : `${baseLabel}...`);
+              emitFallback(mappedPct, status);
+            }
           });
-        });
+        } finally {
+          window.clearInterval(heartbeatTimer);
+        }
+
         fsMap.set(outputName, outU8);
         return 0;
       },
@@ -107,7 +200,16 @@
         return reply({ ok: false, error: 'Web engine.js is not loaded in MAIN world.' });
       }
 
-      const emitProgress = (pct, status) => {
+      const pipelineState = {
+        pct: 5,
+        status: 'Preparing...'
+      };
+
+      const emitProgress = (pct, status, isSubUpdate = false) => {
+        if (!isSubUpdate) {
+          if (typeof pct === 'number' && !isNaN(pct)) pipelineState.pct = pct;
+          if (typeof status === 'string' && status) pipelineState.status = status;
+        }
         try {
           window.postMessage({
             source: 'fish-acc-main',
@@ -132,7 +234,7 @@
         appendToLogsEl: () => {},
         loadFFmpegLibraries: async () => true,
         toBlobURL: null,
-        loadFFmpegHelper: async () => createBridgeFFmpeg(),
+        loadFFmpegHelper: async () => createBridgeFFmpeg(emitProgress, pipelineState),
         parseFpsFromMp4: eng.parseFpsFromMp4,
         parseResolutionFromMp4: eng.parseResolutionFromMp4,
         computeVideoProcessingOptions: eng.computeVideoProcessingOptions,

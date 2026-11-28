@@ -663,6 +663,7 @@
       const port = chrome.runtime.connect({ name: 'fa-ffmpeg-exec' });
       let outChunks = [];
       let outTotalSize = 0;
+      let outTotalChunks = 1;
       let settled = false;
 
       port.onDisconnect.addListener(() => {
@@ -675,16 +676,34 @@
       port.onMessage.addListener((msg) => {
         if (!msg) return;
         if (msg.type === 'PROGRESS') {
-          onProgress(msg);
+          onProgress({
+            stage: msg.stage || 'ffmpeg',
+            percent: Number(msg.percent) || 0,
+            detail: msg.detail || ''
+          });
           return;
         }
         if (msg.type === 'RESULT_INIT') {
           outChunks = [];
           outTotalSize = Number(msg.totalSize) || 0;
+          outTotalChunks = Math.max(1, Number(msg.totalChunks) || 1);
+          onProgress({
+            stage: 'finalize',
+            percent: 0,
+            detail: 'Finalizing MP4 output...'
+          });
           return;
         }
         if (msg.type === 'RESULT_CHUNK' && typeof msg.b64 === 'string') {
           outChunks.push(base64ToUint8(msg.b64));
+          const pct = Math.min(99, Math.round((outChunks.length / outTotalChunks) * 100));
+          onProgress({
+            stage: 'finalize',
+            percent: pct,
+            detail: outTotalChunks > 1
+              ? `Finalizing MP4 (${outChunks.length}/${outTotalChunks})...`
+              : 'Finalizing MP4 output...'
+          });
           return;
         }
         if (msg.type === 'RESULT_DONE') {
@@ -706,6 +725,11 @@
         }
       });
 
+      onProgress({
+        stage: 'upload',
+        percent: 0,
+        detail: totalChunks > 1 ? `Preparing stream (0/${totalChunks})...` : 'Preparing stream...'
+      });
       port.postMessage({
         type: 'INIT',
         inputName: inputName || 'input.mp4',
@@ -717,8 +741,20 @@
       for (let i = 0; i < totalChunks; i++) {
         const slice = u8.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
         port.postMessage({ type: 'CHUNK', index: i, b64: uint8ToBase64(slice) });
+        if (totalChunks > 1) {
+          onProgress({
+            stage: 'upload',
+            percent: Math.round(((i + 1) / totalChunks) * 100),
+            detail: `Preparing stream (${i + 1}/${totalChunks})...`
+          });
+        }
       }
       port.postMessage({ type: 'COMMIT' });
+      onProgress({
+        stage: 'init',
+        percent: 0,
+        detail: 'Starting FFmpeg...'
+      });
     });
   };
 
@@ -754,7 +790,9 @@
             source: 'fish-acc-isolated',
             type: 'FISH_FFMPEG_PROGRESS',
             reqId: msg.reqId,
-            percent: prog.percent || 0
+            stage: prog?.stage || 'ffmpeg',
+            percent: Number(prog?.percent) || 0,
+            detail: prog?.detail || ''
           }, window.location.origin);
         } catch (_) {}
       });
